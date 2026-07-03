@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     # Example: https://cash-flow-forecaster.*\.vercel\.app
     frontend_origin_regex: str = ""
 
+    # Run-history persistence. When set (e.g. a Supabase/Neon Postgres URL) runs
+    # survive restarts; when empty we fall back to a local SQLite file so dev and
+    # tests need zero setup.
+    database_url: str = ""
+
+    # Persistence. When set (e.g. a Supabase/Neon Postgres URL) run history is
+    # stored there and survives redeploys. When empty, we fall back to a local
+    # SQLite file so local dev and tests need no external database.
+    database_url: str = ""
+
     # Forecasting defaults
     horizon_weeks: int = 13
     # Number of walk-forward origins used for backtesting / conformal residuals.
