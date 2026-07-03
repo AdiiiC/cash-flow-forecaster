@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE, RunSummary } from "@/lib/api";
+import { downloadRunCsv, RunSummary } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
 interface Props {
@@ -52,13 +52,14 @@ export function RunHistory({ runs, activeId, onSelect, onRefresh, onClear, loadi
                   {when.toLocaleDateString()} {when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </button>
-              <a
+              <button
+                type="button"
                 className="run-csv"
-                href={`${API_BASE}/api/runs/${r.id}/export.csv`}
+                onClick={() => downloadRunCsv(r.id)}
                 title="Download CSV"
               >
                 CSV
-              </a>
+              </button>
             </li>
           );
         })}

@@ -42,6 +42,16 @@ class Settings(BaseSettings):
     # tests need zero setup.
     database_url: str = ""
 
+    # ---- Auth (JWT + bcrypt) ----------------------------------------------
+    # Secret used to sign access tokens. MUST be set to a strong random value in
+    # production; when empty a dev-only default is used (and auth is insecure).
+    jwt_secret: str = ""
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+
+    @property
+    def effective_jwt_secret(self) -> str:
+        return self.jwt_secret.strip() or "dev-insecure-secret-change-me"
+
     # Persistence. When set (e.g. a Supabase/Neon Postgres URL) run history is
     # stored there and survives redeploys. When empty, we fall back to a local
     # SQLite file so local dev and tests need no external database.

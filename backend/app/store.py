@@ -28,7 +28,9 @@ from sqlalchemy import (
     create_engine,
     delete,
     insert,
+    inspect,
     select,
+    text,
 )
 from sqlalchemy.engine import Engine
 
@@ -54,6 +56,17 @@ _runs = Table(
     Column("runway_weeks", Float, nullable=True),
     Column("label", String(200), nullable=False),
     Column("payload", Text, nullable=False),
+    # Nullable so anonymous demo runs still persist; owned runs carry a user id.
+    Column("user_id", String(32), nullable=True),
+)
+
+_users = Table(
+    "users",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("email", String(254), nullable=False, unique=True),
+    Column("password_hash", String(200), nullable=False),
+    Column("created_at", String(40), nullable=False),
 )
 
 
@@ -87,7 +100,15 @@ def _engine() -> Engine:
 
 
 def init_db() -> None:
-    _metadata.create_all(_engine())
+    engine = _engine()
+    _metadata.create_all(engine)
+    # Lightweight forward-migration: older `runs` tables (created before auth)
+    # lack user_id. ADD COLUMN is supported by both SQLite and Postgres and is a
+    # no-op once the column exists.
+    existing = {c["name"] for c in inspect(engine).get_columns("runs")}
+    if "user_id" not in existing:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE runs ADD COLUMN user_id VARCHAR(32)"))
 
 
 def _ensure() -> None:
@@ -101,7 +122,12 @@ def _ensure() -> None:
             _INITIALIZED = True
 
 
-def save_run(response: ForecastResponse, source: str, label: str) -> str:
+def save_run(
+    response: ForecastResponse,
+    source: str,
+    label: str,
+    user_id: str | None = None,
+) -> str:
     _ensure()
     run_id = uuid.uuid4().hex[:12]
     with _engine().begin() as conn:
@@ -117,12 +143,13 @@ def save_run(response: ForecastResponse, source: str, label: str) -> str:
                 runway_weeks=response.runway_weeks,
                 label=label,
                 payload=response.model_dump_json(),
+                user_id=user_id,
             )
         )
     return run_id
 
 
-def list_runs(limit: int = 25) -> list[RunSummary]:
+def list_runs(limit: int = 25, user_id: str | None = None) -> list[RunSummary]:
     _ensure()
     stmt = (
         select(
@@ -136,6 +163,7 @@ def list_runs(limit: int = 25) -> list[RunSummary]:
             _runs.c.runway_weeks,
             _runs.c.label,
         )
+        .where(_runs.c.user_id == user_id if user_id else _runs.c.user_id.is_(None))
         .order_by(_runs.c.created_at.desc())
         .limit(limit)
     )
@@ -157,9 +185,10 @@ def list_runs(limit: int = 25) -> list[RunSummary]:
     ]
 
 
-def get_run(run_id: str) -> ForecastResponse | None:
+def get_run(run_id: str, user_id: str | None = None) -> ForecastResponse | None:
     _ensure()
-    stmt = select(_runs.c.payload).where(_runs.c.id == run_id)
+    owner = _runs.c.user_id == user_id if user_id else _runs.c.user_id.is_(None)
+    stmt = select(_runs.c.payload).where(_runs.c.id == run_id, owner)
     with _engine().connect() as conn:
         row = conn.execute(stmt).first()
     if row is None:
@@ -167,9 +196,50 @@ def get_run(run_id: str) -> ForecastResponse | None:
     return ForecastResponse.model_validate(json.loads(row[0]))
 
 
-def clear_runs() -> int:
-    """Delete all saved runs. Returns the number of rows removed."""
+def clear_runs(user_id: str | None = None) -> int:
+    """Delete saved runs for the given owner. Returns the number of rows removed."""
     _ensure()
+    owner = _runs.c.user_id == user_id if user_id else _runs.c.user_id.is_(None)
     with _engine().begin() as conn:
-        result = conn.execute(delete(_runs))
+        result = conn.execute(delete(_runs).where(owner))
         return result.rowcount if result.rowcount is not None else 0
+
+
+# ---- Users --------------------------------------------------------------------
+
+
+def create_user(email: str, password_hash: str) -> dict:
+    """Insert a new user. Raises if the email already exists (unique constraint)."""
+    _ensure()
+    user_id = uuid.uuid4().hex[:12]
+    created_at = datetime.utcnow().isoformat()
+    with _engine().begin() as conn:
+        conn.execute(
+            insert(_users).values(
+                id=user_id,
+                email=email,
+                password_hash=password_hash,
+                created_at=created_at,
+            )
+        )
+    return {"id": user_id, "email": email, "created_at": created_at}
+
+
+def get_user_by_email(email: str) -> dict | None:
+    _ensure()
+    stmt = select(
+        _users.c.id, _users.c.email, _users.c.password_hash, _users.c.created_at
+    ).where(_users.c.email == email)
+    with _engine().connect() as conn:
+        row = conn.execute(stmt).mappings().first()
+    return dict(row) if row else None
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    _ensure()
+    stmt = select(
+        _users.c.id, _users.c.email, _users.c.password_hash, _users.c.created_at
+    ).where(_users.c.id == user_id)
+    with _engine().connect() as conn:
+        row = conn.execute(stmt).mappings().first()
+    return dict(row) if row else None

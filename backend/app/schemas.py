@@ -236,6 +236,41 @@ class FxRates(BaseModel):
     as_of: date
 
 
+class UserCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Enter a valid email address.")
+        return v
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    created_at: datetime
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
+
 class SyntheticRequest(BaseModel):
     weeks: int = Field(104, ge=26, le=520)
     seed: int = 42

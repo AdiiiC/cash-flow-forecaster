@@ -163,6 +163,107 @@ export const API_BASE = RAW_API_BASE ?? "http://localhost:8000";
 
 export class ApiError extends Error {}
 
+/* ---------------------------------------------------------------------------
+ * Auth: token storage + Bearer header helpers.
+ * The token lives in localStorage so a reload keeps the session. A tiny
+ * subscriber list lets React components react to login/logout.
+ * ------------------------------------------------------------------------- */
+
+export interface UserPublic {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: UserPublic;
+}
+
+const TOKEN_KEY = "cff.token";
+const authListeners = new Set<() => void>();
+
+/** Subscribe to auth-token changes (login/logout). Returns an unsubscribe fn. */
+export function onAuthChange(cb: () => void): () => void {
+  authListeners.add(cb);
+  return () => authListeners.delete(cb);
+}
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem(TOKEN_KEY, token);
+  else window.localStorage.removeItem(TOKEN_KEY);
+  authListeners.forEach((cb) => cb());
+}
+
+/** Bearer header for the current token, or an empty object when signed out. */
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function isAuthenticated(): boolean {
+  return getToken() !== null;
+}
+
+async function handleToken(res: Response): Promise<TokenResponse> {
+  if (!res.ok) {
+    let detail = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      /* non-JSON error body; keep default */
+    }
+    throw new ApiError(detail);
+  }
+  return (await res.json()) as TokenResponse;
+}
+
+export async function register(email: string, password: string): Promise<TokenResponse> {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await handleToken(res);
+  setToken(body.access_token);
+  return body;
+}
+
+export async function login(email: string, password: string): Promise<TokenResponse> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await handleToken(res);
+  setToken(body.access_token);
+  return body;
+}
+
+export function logout(): void {
+  setToken(null);
+}
+
+/** Fetch the signed-in user, or null when the token is missing/expired. */
+export async function fetchMe(): Promise<UserPublic | null> {
+  if (!getToken()) return null;
+  const res = await fetch(`${API_BASE}/api/auth/me`, { headers: authHeaders() });
+  if (res.status === 401) {
+    setToken(null);
+    return null;
+  }
+  if (!res.ok) throw new ApiError(`Could not load account (${res.status})`);
+  return (await res.json()) as UserPublic;
+}
+
 async function handle(res: Response): Promise<ForecastResponse> {
   if (!res.ok) {
     let detail = `Request failed (${res.status})`;
@@ -190,7 +291,7 @@ export interface DemoParams {
 export async function fetchDemoForecast(params: DemoParams): Promise<ForecastResponse> {
   const res = await fetch(`${API_BASE}/api/forecast/demo`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(params),
   });
   return handle(res);
@@ -226,7 +327,7 @@ export function streamDemoForecast(
     (async () => {
       try {
         const res = await fetch(url.toString(), {
-          headers: { Accept: "text/event-stream" },
+          headers: { Accept: "text/event-stream", ...authHeaders() },
           signal,
         });
         if (!res.ok || !res.body) {
@@ -273,26 +374,44 @@ export async function uploadForecast(
   form.append("file", file);
   const url = new URL(`${API_BASE}/api/forecast/upload`);
   url.searchParams.set("opening_balance", String(openingBalance));
-  const res = await fetch(url.toString(), { method: "POST", body: form });
+  const res = await fetch(url.toString(), { method: "POST", body: form, headers: authHeaders() });
   return handle(res);
 }
 
 export async function fetchRuns(limit = 25): Promise<RunSummary[]> {
-  const res = await fetch(`${API_BASE}/api/runs?limit=${limit}`);
+  const res = await fetch(`${API_BASE}/api/runs?limit=${limit}`, { headers: authHeaders() });
   if (!res.ok) throw new ApiError(`Could not load run history (${res.status})`);
   return (await res.json()) as RunSummary[];
 }
 
 export async function fetchRun(id: string): Promise<ForecastResponse> {
-  const res = await fetch(`${API_BASE}/api/runs/${id}`);
+  const res = await fetch(`${API_BASE}/api/runs/${id}`, { headers: authHeaders() });
   return handle(res);
 }
 
 export async function clearRuns(): Promise<number> {
-  const res = await fetch(`${API_BASE}/api/runs`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/api/runs`, { method: "DELETE", headers: authHeaders() });
   if (!res.ok) throw new ApiError(`Could not clear run history (${res.status})`);
   const body = (await res.json()) as { deleted: number };
   return body.deleted;
+}
+
+/**
+ * Download a run's CSV. Uses fetch (not a plain link) so the Bearer token is
+ * sent — user-scoped runs 404 on an unauthenticated request.
+ */
+export async function downloadRunCsv(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/runs/${id}/export.csv`, { headers: authHeaders() });
+  if (!res.ok) throw new ApiError(`Could not export run (${res.status})`);
+  const blob = await res.blob();
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = `forecast_${id}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(href);
 }
 
 export async function fetchFxRates(): Promise<FxRates> {

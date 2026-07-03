@@ -5,11 +5,12 @@ import json
 import queue
 import threading
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from app import fx as fx_mod
 from app import store
+from app.auth import get_current_user_optional
 from app.config import get_settings
 from app.data.ingest import IngestError, parse_csv
 from app.data.synthetic import generate_ledger
@@ -42,7 +43,10 @@ def health() -> dict:
 
 
 @router.post("/forecast/demo", response_model=ForecastResponse)
-def forecast_demo(req: SyntheticRequest) -> ForecastResponse:
+def forecast_demo(
+    req: SyntheticRequest,
+    user: dict | None = Depends(get_current_user_optional),
+) -> ForecastResponse:
     """Generate a synthetic SaaS ledger and forecast it (self-contained demo)."""
     ledger = generate_ledger(
         weeks=req.weeks,
@@ -56,6 +60,7 @@ def forecast_demo(req: SyntheticRequest) -> ForecastResponse:
         source="demo",
         thresholds=req.thresholds,
         scenario=req.scenario,
+        user_id=user["id"] if user else None,
     )
 
 
@@ -68,6 +73,7 @@ def forecast_demo_stream(
     currency: str = "USD",
     min_balance: float | None = None,
     min_runway_weeks: float | None = None,
+    user: dict | None = Depends(get_current_user_optional),
 ) -> StreamingResponse:
     """Server-Sent Events: emit progress while the (potentially ~20s) forecast runs.
 
@@ -86,6 +92,7 @@ def forecast_demo_stream(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     thresholds = Thresholds(min_balance=min_balance, min_runway_weeks=min_runway_weeks)
+    user_id = user["id"] if user else None
     q: "queue.Queue[tuple[str, object]]" = queue.Queue()
 
     def on_progress(fraction: float, message: str) -> None:
@@ -101,7 +108,7 @@ def forecast_demo_stream(
                 currency=req.currency,
             )
             result = build_forecast(
-                ledger, source="demo", thresholds=thresholds, progress=on_progress
+                ledger, source="demo", thresholds=thresholds, user_id=user_id, progress=on_progress
             )
             q.put(("result", result.model_dump(mode="json")))
         except Exception as exc:  # noqa: BLE001 - forward failure to the client
@@ -126,9 +133,12 @@ def forecast_demo_stream(
 
 
 @router.post("/forecast", response_model=ForecastResponse)
-def forecast_ledger(ledger: Ledger) -> ForecastResponse:
+def forecast_ledger(
+    ledger: Ledger,
+    user: dict | None = Depends(get_current_user_optional),
+) -> ForecastResponse:
     """Forecast a caller-supplied structured ledger."""
-    return build_forecast(ledger, source="ledger")
+    return build_forecast(ledger, source="ledger", user_id=user["id"] if user else None)
 
 
 @router.post("/forecast/upload", response_model=ForecastResponse)
@@ -136,6 +146,7 @@ async def forecast_upload(
     file: UploadFile = File(...),
     opening_balance: float = 0.0,
     currency: str = "USD",
+    user: dict | None = Depends(get_current_user_optional),
 ) -> ForecastResponse:
     """Upload a CSV of transactions and forecast it."""
     if not (file.filename or "").lower().endswith(".csv"):
@@ -149,35 +160,49 @@ async def forecast_upload(
         ledger = parse_csv(raw, opening_balance=opening_balance, currency=currency)
     except IngestError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return build_forecast(ledger, source="upload", label=file.filename or "upload")
+    return build_forecast(
+        ledger,
+        source="upload",
+        label=file.filename or "upload",
+        user_id=user["id"] if user else None,
+    )
 
 
 # ---- Run history (persistence) -------------------------------------------------
 
 
 @router.get("/runs", response_model=list[RunSummary])
-def list_runs(limit: int = Query(25, ge=1, le=100)) -> list[RunSummary]:
-    return store.list_runs(limit=limit)
+def list_runs(
+    limit: int = Query(25, ge=1, le=100),
+    user: dict | None = Depends(get_current_user_optional),
+) -> list[RunSummary]:
+    return store.list_runs(limit=limit, user_id=user["id"] if user else None)
 
 
 @router.delete("/runs")
-def clear_runs() -> dict:
-    """Delete all saved runs from history."""
-    deleted = store.clear_runs()
+def clear_runs(user: dict | None = Depends(get_current_user_optional)) -> dict:
+    """Delete all saved runs for the current owner (or anonymous history)."""
+    deleted = store.clear_runs(user_id=user["id"] if user else None)
     return {"deleted": deleted}
 
 
 @router.get("/runs/{run_id}", response_model=ForecastResponse)
-def get_run(run_id: str) -> ForecastResponse:
-    run = store.get_run(run_id)
+def get_run(
+    run_id: str,
+    user: dict | None = Depends(get_current_user_optional),
+) -> ForecastResponse:
+    run = store.get_run(run_id, user_id=user["id"] if user else None)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found.")
     return run
 
 
 @router.get("/runs/{run_id}/export.csv")
-def export_run_csv(run_id: str) -> PlainTextResponse:
-    run = store.get_run(run_id)
+def export_run_csv(
+    run_id: str,
+    user: dict | None = Depends(get_current_user_optional),
+) -> PlainTextResponse:
+    run = store.get_run(run_id, user_id=user["id"] if user else None)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found.")
     csv_text = _forecast_to_csv(run)

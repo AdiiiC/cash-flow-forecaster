@@ -19,6 +19,7 @@ import {
   uploadForecast,
 } from "@/lib/api";
 import { AlertsBanner } from "@/components/AlertsBanner";
+import { AuthMenu } from "@/components/AuthMenu";
 import { BalanceChart } from "@/components/BalanceChart";
 import { CalibrationBadge } from "@/components/CalibrationBadge";
 import { CategoryWaterfall } from "@/components/CategoryWaterfall";
@@ -198,19 +199,22 @@ export default function Page() {
             Probabilistic forecasting · calibrated intervals · backtested · AI briefing grounded in the numbers
           </div>
         </div>
-        {data && (
-          <div className="meta num">
-            <div className="meta-badges">
-              {data.cached && <span className="badge">cached</span>}
-              <CalibrationBadge calibration={data.calibration} />
-              <button className="mini-btn wide" onClick={cycleFx} title="Show approximate FX conversion">
-                {fxTo ? `≈ ${fxTo}` : "FX ≈"}
-              </button>
+        <div className="masthead-right">
+          <AuthMenu onAuthChange={refreshRuns} />
+          {data && (
+            <div className="meta num">
+              <div className="meta-badges">
+                {data.cached && <span className="badge">cached</span>}
+                <CalibrationBadge calibration={data.calibration} />
+                <button className="mini-btn wide" onClick={cycleFx} title="Show approximate FX conversion">
+                  {fxTo ? `≈ ${fxTo}` : "FX ≈"}
+                </button>
+              </div>
+              <div>generated {new Date(data.generated_at).toISOString().slice(0, 16).replace("T", " ")}Z</div>
+              <div>horizon {data.horizon_weeks}w · {data.currency}</div>
             </div>
-            <div>generated {new Date(data.generated_at).toISOString().slice(0, 16).replace("T", " ")}Z</div>
-            <div>horizon {data.horizon_weeks}w · {data.currency}</div>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <Controls

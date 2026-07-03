@@ -200,6 +200,7 @@ def build_forecast(
     scenario: ScenarioInput | None = None,
     use_cache: bool = True,
     persist: bool = True,
+    user_id: str | None = None,
     progress: ProgressFn | None = None,
 ) -> ForecastResponse:
     settings = get_settings()
@@ -216,7 +217,7 @@ def build_forecast(
     if persist:
         run_label = label or f"{source} · {ledger.currency} · {h}w"
         try:
-            store.save_run(result, source=source, label=run_label)
+            store.save_run(result, source=source, label=run_label, user_id=user_id)
         except Exception as exc:  # noqa: BLE001 - persistence must never break a forecast
             logger.warning("Failed to persist forecast run: %s", exc, exc_info=True)
 
