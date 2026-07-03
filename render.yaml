@@ -1,0 +1,24 @@
+# Render Blueprint — deploys the FastAPI backend in backend/
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: cash-flow-forecaster-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      # Pin a Python with prebuilt wheels for numpy/pandas/scikit-learn.
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # LLM provider: "auto" uses the first key set below; "none" = template only.
+      - key: LLM_PROVIDER
+        value: auto
+      # Set these in the Render dashboard (sync:false = not stored in git).
+      - key: GEMINI_API_KEY
+        sync: false
+      # Your Vercel frontend URL, e.g. https://cash-flow-forecaster.vercel.app
+      - key: FRONTEND_ORIGIN
+        sync: false
