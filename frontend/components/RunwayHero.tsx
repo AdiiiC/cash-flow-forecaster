@@ -6,11 +6,38 @@ interface Props {
   data: ForecastResponse;
 }
 
-const KIND_ICON: Record<string, string> = {
-  cut: "✂️",
-  afford: "➕",
-  info: "ℹ️",
+/** Minimal 16px line icons; stroke uses currentColor so per-kind CSS colors apply. */
+const KIND_ICON: Record<string, JSX.Element> = {
+  cut: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <line x1="20" y1="4" x2="8.12" y2="15.88" />
+      <line x1="14.47" y1="14.48" x2="20" y2="20" />
+      <line x1="8.12" y1="8.12" x2="12" y2="12" />
+    </svg>
+  ),
+  afford: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+  ),
+  info: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="11" x2="12" y2="16" />
+      <circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  ),
 };
+
+const FALLBACK_ICON = (
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden>
+    <circle cx="12" cy="12" r="4" />
+  </svg>
+);
 
 /**
  * The headline answer a business owner actually cares about: how many months of
@@ -58,7 +85,7 @@ export function RunwayHero({ data }: Props) {
           {insight.recommendations.map((rec, i) => (
             <li key={i} className={`runway-rec ${rec.kind}`}>
               <span className="rec-icon" aria-hidden>
-                {KIND_ICON[rec.kind] ?? "•"}
+                {KIND_ICON[rec.kind] ?? FALLBACK_ICON}
               </span>
               <span>{rec.message}</span>
             </li>

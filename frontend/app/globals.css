@@ -383,7 +383,37 @@ button:disabled {
 }
 .runway-rec .rec-icon {
   flex-shrink: 0;
-  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-top: -1px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-muted);
+  background: var(--ink-700);
+}
+.runway-rec .rec-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.runway-rec.cut .rec-icon {
+  color: var(--neg);
+  border-color: color-mix(in srgb, var(--neg) 45%, var(--line-strong));
+  background: color-mix(in srgb, var(--neg) 12%, var(--ink-700));
+}
+.runway-rec.afford .rec-icon {
+  color: var(--pos);
+  border-color: color-mix(in srgb, var(--pos) 45%, var(--line-strong));
+  background: color-mix(in srgb, var(--pos) 12%, var(--ink-700));
+}
+.runway-rec.info .rec-icon {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 12%, var(--ink-700));
 }
 
 /* ---- KPI grid ---- */
