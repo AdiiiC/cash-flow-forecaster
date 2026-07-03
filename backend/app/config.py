@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     anthropic_model: str = ""
 
     frontend_origin: str = "http://localhost:3000"
+    # Optional regex to allow dynamic origins (e.g. Vercel preview deploys):
+    #   https://cash-flow-forecaster-biz.*\.vercel\.app
+    frontend_origin_regex: str = ""
+
+    @property
+    def frontend_origins(self) -> list[str]:
+        """Allow a comma-separated list of exact origins."""
+        return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
 
     # Forecasting defaults
     horizon_weeks: int = 13
