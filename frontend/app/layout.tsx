@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cash-Flow-Forecaster",
+  title: "Cash-Flow Forecaster — see where your cash is heading",
   description:
-    "Probabilistic 13-week cash-flow and MRR forecasting with calibrated intervals and grounded narratives.",
+    "A 13-week cash-flow forecast in plain English: an honest best estimate, a realistic range, and a fact-checked summary. Built by a Senior AI Engineer.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

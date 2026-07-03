@@ -262,6 +262,13 @@ export async function fetchRun(id: string): Promise<ForecastResponse> {
   return handle(res);
 }
 
+export async function clearRuns(): Promise<number> {
+  const res = await fetch(`${API_BASE}/api/runs`, { method: "DELETE" });
+  if (!res.ok) throw new ApiError(`Could not clear run history (${res.status})`);
+  const body = (await res.json()) as { deleted: number };
+  return body.deleted;
+}
+
 export async function fetchFxRates(): Promise<FxRates> {
   const res = await fetch(`${API_BASE}/api/fx`);
   if (!res.ok) throw new ApiError(`Could not load FX rates (${res.status})`);

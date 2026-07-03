@@ -13,8 +13,10 @@ export function DriverBars({ drivers, currency }: { drivers: Driver[]; currency:
   return (
     <div className="panel">
       <div className="panel-head">
-        <h3>Cash-flow drivers</h3>
-        <span className="badge">exact weekly decomposition</span>
+        <h3>What&apos;s moving your cash</h3>
+        <span className="badge" title="Average money in (right) or out (left) per week, straight from the ledger — not a model guess.">
+          avg per week
+        </span>
       </div>
       <div className="drivers">
         {drivers.map((d) => {
@@ -42,8 +44,8 @@ export function DriverBars({ drivers, currency }: { drivers: Driver[]; currency:
         })}
       </div>
       <div className="driver-note">
-        Bars show mean weekly signed contribution. Volatility (dispersion) is the
-        honest analog of feature importance — larger swings mean a noisier driver.
+        Each bar is a real category from your ledger: green adds cash, red spends
+        it. Longer bars move your balance the most week to week.
       </div>
     </div>
   );

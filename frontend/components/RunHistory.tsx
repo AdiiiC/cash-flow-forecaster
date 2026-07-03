@@ -8,20 +8,32 @@ interface Props {
   activeId: string | null;
   onSelect: (id: string) => void;
   onRefresh: () => void;
+  onClear: () => void;
   loading: boolean;
 }
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
-export function RunHistory({ runs, activeId, onSelect, onRefresh, loading }: Props) {
+export function RunHistory({ runs, activeId, onSelect, onRefresh, onClear, loading }: Props) {
   return (
     <aside className="history panel">
       <div className="panel-head">
         <h3>Run history</h3>
-        <button className="mini-btn" onClick={onRefresh} disabled={loading} aria-label="Refresh history">
-          ↻
-        </button>
+        <div className="history-actions">
+          <button className="mini-btn" onClick={onRefresh} disabled={loading} aria-label="Refresh history">
+            ↻
+          </button>
+          <button
+            className="mini-btn"
+            onClick={onClear}
+            disabled={loading || runs.length === 0}
+            title="Clear all saved runs"
+            aria-label="Clear run history"
+          >
+            Clear
+          </button>
+        </div>
       </div>
       {runs.length === 0 && <div className="history-empty">No saved runs yet.</div>}
       <ul className="run-list">

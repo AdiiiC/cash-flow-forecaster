@@ -12,12 +12,13 @@ export function CalibrationBadge({ calibration }: { calibration: IntervalCalibra
   return (
     <span
       className={`badge ${ok ? "ok" : "warn"}`}
-      title={`Nominal ${formatPercent(calibration.target)} interval; measured ${formatPercent(
+      title={`The shaded range is designed to hold ${formatPercent(
+        calibration.target,
+      )} of outcomes; in testing it actually held ${formatPercent(
         calibration.empirical,
-      )} out-of-sample coverage${calibration.conformal ? " (conformal-calibrated)" : ""}.`}
+      )}${calibration.conformal ? " (conformal-calibrated)" : ""}.`}
     >
-      Coverage {formatPercent(calibration.empirical)} / {formatPercent(calibration.target)}
-      {calibration.conformal ? " · conformal" : ""}
+      Range holds {formatPercent(calibration.empirical)}
     </span>
   );
 }

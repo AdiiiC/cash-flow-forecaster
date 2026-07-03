@@ -360,6 +360,11 @@ button:disabled {
 .panel-head h3 {
   font-size: 14px;
 }
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .series-grid {
   display: grid;
@@ -842,6 +847,132 @@ button:disabled {
     grid-template-columns: 1fr;
   }
   .two-col {
+    grid-template-columns: 1fr;
+  }
+  .trust-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================================================
+   Business-friendly layer — plain-language framing on top of the rigour.
+   ============================================================================ */
+
+/* Role / positioning eyebrow above the title */
+.eyebrow {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+/* Plain-English tagline is .sub (larger, primary); the technical line sits under it, muted. */
+.masthead .sub {
+  max-width: 60ch;
+}
+.masthead .sub-tech {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  margin-top: 6px;
+}
+
+/* Small "?" affordance next to field labels */
+.hint-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+}
+.field label {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Subtle "most likely" tag inside KPI labels */
+.k-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Trust strip: rigour translated into plain benefits */
+.trust {
+  margin-bottom: 24px;
+}
+.trust-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.trust-card {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--pos);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.trust-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.trust-body {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+.trust-method {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  cursor: help;
+}
+
+/* Plain-language section divider before the detailed panels */
+.section-label {
+  margin: 8px 0 16px;
+  padding-top: 4px;
+}
+.section-label h2 {
+  font-size: 15px;
+}
+.section-label p {
+  margin: 6px 0 0;
+  max-width: 70ch;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .trust-grid {
     grid-template-columns: 1fr;
   }
 }

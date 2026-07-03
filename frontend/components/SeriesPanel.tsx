@@ -126,27 +126,27 @@ export function SeriesPanel({ series }: { series: SeriesForecast }) {
       </ResponsiveContainer>
 
       <div className="metric-row">
-        <div className="metric">
-          <span className="m-label">MASE</span>
+        <div className="metric" title="Accuracy vs a naive baseline. Below 1.0 means it beats 'next week = last week'. Lower is better.">
+          <span className="m-label">Accuracy (MASE)</span>
           <span className={`m-value num ${beatsBaseline ? "pos" : "neg"}`}>
             {formatNumber(series.metrics.mase)}
           </span>
         </div>
-        <div className="metric">
-          <span className="m-label">Coverage (P10–P90)</span>
+        <div className="metric" title="How often reality landed inside the shaded range during testing. Close to 80% is well-calibrated.">
+          <span className="m-label">Range accuracy</span>
           <span className="m-value num">{formatPercent(series.metrics.coverage_80)}</span>
         </div>
-        <div className="metric">
-          <span className="m-label">Pinball</span>
+        <div className="metric" title="Pinball loss: a scoring rule for the full range of outcomes. Lower is better.">
+          <span className="m-label">Range score</span>
           <span className="m-value num">{formatCurrency(series.metrics.pinball, currency, true)}</span>
         </div>
-        <div className="metric">
-          <span className="m-label">Backtest origins</span>
+        <div className="metric" title="How many times the model was re-tested on past data before you saw this.">
+          <span className="m-label">Times tested</span>
           <span className="m-value num">{series.metrics.n_origins}</span>
         </div>
       </div>
 
-      <div className="leaderboard" aria-label="Model comparison">
+      <div className="leaderboard" aria-label="Model comparison" title="Models we tried — the winner (lowest error) was chosen automatically.">
         {models.map(([name, mase]) => (
           <div key={name} className={`lb-row ${name === series.model ? "winner" : ""}`}>
             <span className="lb-name">{name}</span>

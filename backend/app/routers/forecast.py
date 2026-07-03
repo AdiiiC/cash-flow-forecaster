@@ -154,6 +154,13 @@ def list_runs(limit: int = Query(25, ge=1, le=100)) -> list[RunSummary]:
     return store.list_runs(limit=limit)
 
 
+@router.delete("/runs")
+def clear_runs() -> dict:
+    """Delete all saved runs from history."""
+    deleted = store.clear_runs()
+    return {"deleted": deleted}
+
+
 @router.get("/runs/{run_id}", response_model=ForecastResponse)
 def get_run(run_id: str) -> ForecastResponse:
     run = store.get_run(run_id)

@@ -102,6 +102,13 @@ def get_run(run_id: str) -> ForecastResponse | None:
     return ForecastResponse.model_validate(json.loads(row["payload"]))
 
 
+def clear_runs() -> int:
+    """Delete all saved runs. Returns the number of rows removed."""
+    with _LOCK, _connect() as conn:
+        cur = conn.execute("DELETE FROM runs")
+        return cur.rowcount if cur.rowcount is not None else 0
+
+
 # Ensure the schema exists as soon as this module is imported, so a request that
 # arrives before the FastAPI startup hook (or after the db file is removed) still
 # finds the table. CREATE TABLE IF NOT EXISTS makes this safe to run repeatedly.

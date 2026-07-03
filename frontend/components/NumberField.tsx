@@ -11,6 +11,8 @@ interface Props {
   max?: number;
   step?: number;
   disabled?: boolean;
+  /** Plain-language explanation shown on hover — makes fields legible to non-technical users. */
+  hint?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function NumberField({
   max = Number.POSITIVE_INFINITY,
   step = 1,
   disabled = false,
+  hint,
 }: Props) {
   const clamp = useCallback((v: number) => Math.min(max, Math.max(min, v)), [min, max]);
 
@@ -43,7 +46,14 @@ export function NumberField({
 
   return (
     <div className="field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id} title={hint}>
+        {label}
+        {hint && (
+          <span className="hint-dot" title={hint} aria-hidden>
+            ?
+          </span>
+        )}
+      </label>
       <div className="stepper" data-disabled={disabled || undefined}>
         <button
           type="button"

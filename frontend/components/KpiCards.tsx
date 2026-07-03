@@ -23,38 +23,42 @@ export function KpiCards({ data, fxTo, rates }: Props) {
   return (
     <section className="kpis" aria-label="Key figures">
       <div className="kpi accent">
-        <div className="k-label">Opening balance</div>
+        <div className="k-label">Cash on hand today</div>
         <div className="k-value num">{formatCurrency(data.opening_balance, currency)}</div>
         <div className="k-note">as of {data.as_of}</div>
         {fx && <div className="k-fx num">{fx(data.opening_balance)}</div>}
       </div>
 
       <div className={`kpi ${balanceTrend >= 0 ? "good" : "bad"}`}>
-        <div className="k-label">Projected balance · {data.horizon_weeks}w (P50)</div>
+        <div className="k-label" title="P50 = the middle outcome: equally likely to be higher or lower.">
+          Cash in {data.horizon_weeks} weeks <span className="k-tag">most likely</span>
+        </div>
         <div className={`k-value num ${balanceTrend >= 0 ? "pos" : "neg"}`}>
           {formatCurrency(data.projected_balance_p50, currency)}
         </div>
         <div className="k-note num">
           {balanceTrend >= 0 ? "+" : ""}
-          {formatCurrency(balanceTrend, currency)} vs opening
+          {formatCurrency(balanceTrend, currency)} vs today
         </div>
         {fx && <div className="k-fx num">{fx(data.projected_balance_p50)}</div>}
       </div>
 
       <div className={`kpi ${solvent ? "good" : "bad"}`}>
-        <div className="k-label">Cash runway</div>
+        <div className="k-label" title="How long until cash is forecast to run out.">Cash runway</div>
         <div className={`k-value num ${solvent ? "pos" : "neg"}`}>
-          {solvent ? "> horizon" : `${data.runway_weeks}w`}
+          {solvent ? "13+ weeks" : `${data.runway_weeks} weeks`}
         </div>
         <div className="k-note">
           {solvent
-            ? "Cash-positive across the forecast"
-            : "Median cash turns negative"}
+            ? "Stays cash-positive across the forecast"
+            : "When cash is projected to hit zero"}
         </div>
       </div>
 
       <div className="kpi">
-        <div className="k-label">Net cash flow · {data.horizon_weeks}w (P50)</div>
+        <div className="k-label" title="Money in minus money out over the forecast (middle estimate).">
+          Net cash over {data.horizon_weeks} weeks
+        </div>
         <NetTotal data={data} fx={fx} />
       </div>
     </section>
@@ -69,7 +73,7 @@ function NetTotal({ data, fx }: { data: ForecastResponse; fx: ((v: number) => st
       <div className={`k-value num ${total >= 0 ? "pos" : "neg"}`}>
         {formatCurrency(total, data.currency)}
       </div>
-      <div className="k-note">Sum of weekly median net flow</div>
+      <div className="k-note">Total money in minus money out</div>
       {fx && <div className="k-fx num">{fx(total)}</div>}
     </>
   );

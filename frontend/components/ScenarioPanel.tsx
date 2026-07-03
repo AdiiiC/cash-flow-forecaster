@@ -50,52 +50,58 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
   return (
     <div className="panel">
       <div className="panel-head">
-        <h2>Scenario planner</h2>
-        <span className="badge">deterministic overlay</span>
+        <h2>What-if planner</h2>
+        <span className="badge" title="An instant estimate: we transform the forecast to reflect your assumptions.">
+          instant estimate
+        </span>
       </div>
 
       <div className="scenario-grid">
         <NumberField
           id="growth"
-          label="Revenue growth %/wk"
+          label="Revenue growth (% / week)"
           value={input.revenue_growth_pct}
           onChange={set("revenue_growth_pct")}
           min={-20}
           max={20}
           step={0.5}
           disabled={loading}
+          hint="How fast money coming in grows each week, compounded."
         />
         <NumberField
           id="cost"
-          label="Cost multiplier"
+          label="Costs vs today (×)"
           value={input.cost_multiplier}
           onChange={set("cost_multiplier")}
           min={0.1}
           max={3}
           step={0.05}
           disabled={loading}
+          hint="Scale your outgoings. 0.9 = cut costs 10%, 1.2 = spend 20% more."
         />
         <NumberField
           id="oneoff"
-          label="One-off amount"
+          label="One-off cash event"
           value={input.one_off_amount}
           onChange={set("one_off_amount")}
           min={0}
           step={10000}
           disabled={loading}
+          hint="A single lump sum — e.g. a big invoice paid, or a large purchase."
         />
         <NumberField
           id="oneoffweek"
-          label="One-off at week"
+          label="...happening in week"
           value={input.one_off_week}
           onChange={set("one_off_week")}
           min={1}
           max={data.horizon_weeks}
           step={1}
           disabled={loading}
+          hint="Which week the one-off cash event lands in."
         />
         <div className="field">
-          <label>One-off direction</label>
+          <label>Money in or out?</label>
           <div className="segmented" role="group" aria-label="One-off direction">
             {(["inflow", "outflow"] as const).map((d) => (
               <button
@@ -106,18 +112,18 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
                 onClick={() => onChange({ ...input, one_off_direction: d })}
                 disabled={loading}
               >
-                {d}
+                {d === "inflow" ? "Money in" : "Money out"}
               </button>
             ))}
           </div>
         </div>
         <div className="scenario-actions">
           <button className="primary" onClick={onApply} disabled={loading}>
-            {loading ? "Applying…" : "Apply scenario"}
+            {loading ? "Applying…" : "See what-if"}
           </button>
           {result && (
             <button className="ghost" onClick={onClear} disabled={loading}>
-              Clear
+              Reset
             </button>
           )}
         </div>
@@ -133,15 +139,15 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
               currency={data.currency}
             />
             <Delta
-              label="Net cash (horizon)"
+              label="Net cash (13 weeks)"
               value={undefined}
               delta={result.delta_net_total}
               currency={data.currency}
             />
             <div className="metric">
-              <span className="m-label">Scenario runway</span>
+              <span className="m-label">What-if runway</span>
               <span className={`m-value num ${result.runway_weeks === null ? "pos" : "neg"}`}>
-                {result.runway_weeks === null ? "> horizon" : `${result.runway_weeks}w`}
+                {result.runway_weeks === null ? "13+ weeks" : `${result.runway_weeks} weeks`}
               </span>
             </div>
           </div>
@@ -203,9 +209,10 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
             </LineChart>
           </ResponsiveContainer>
           <div className="driver-note">
-            Scenario is a transparent transform of the point forecast (growth
-            compounded weekly, costs scaled, one-off applied) — it is not
-            re-backtested, so treat the band-free line as a planning overlay.
+            This what-if is a transparent estimate built from the main forecast
+            (growth compounded weekly, costs scaled, one-off applied). It is a
+            quick planning view, so it doesn&apos;t carry the full confidence band
+            — use it to compare directions, not as a re-tested forecast.
           </div>
         </>
       )}

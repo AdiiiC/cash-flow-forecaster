@@ -73,67 +73,73 @@ export function Controls({ params, onParamsChange, onRunDemo, onUpload, loading 
       </div>
       <NumberField
         id="weeks"
-        label="History weeks"
+        label="History used (weeks)"
         value={params.weeks}
         onChange={set("weeks")}
         min={26}
         max={520}
         step={4}
         disabled={loading}
+        hint="How much past data the model learns from. More history can capture longer trends."
       />
       <NumberField
         id="mrr"
-        label="Starting MRR"
+        label="Monthly revenue (MRR)"
         value={params.starting_mrr}
         onChange={set("starting_mrr")}
         min={0}
         step={preset.mrrStep}
         disabled={loading}
+        hint="Monthly Recurring Revenue — your predictable subscription income at the start."
       />
       <NumberField
         id="open"
-        label="Opening balance"
+        label="Cash on hand"
         value={params.opening_balance}
         onChange={set("opening_balance")}
         step={preset.balStep}
         disabled={loading}
+        hint="Cash available in the bank at the start of the forecast."
       />
       <NumberField
         id="seed"
-        label="Seed"
+        label="Demo seed"
         value={params.seed}
         onChange={set("seed")}
         min={0}
         step={1}
         disabled={loading}
+        hint="Only affects the sample demo data. Same seed = same numbers, so results are reproducible."
       />
 
       <NumberField
         id="minbal"
-        label="Alert: min balance"
+        label="Warn if cash below"
         value={params.thresholds?.min_balance ?? 0}
         onChange={setThreshold("min_balance")}
         min={0}
         step={preset.balStep}
         disabled={loading}
+        hint="Show an alert if projected cash ever drops under this amount. 0 turns it off."
       />
       <NumberField
         id="minrunway"
-        label="Alert: min runway (wks)"
+        label="Warn if runway under (weeks)"
         value={params.thresholds?.min_runway_weeks ?? 0}
         onChange={setThreshold("min_runway_weeks")}
         min={0}
         max={104}
         step={1}
         disabled={loading}
+        hint="Alert if cash is projected to run out within this many weeks. 0 turns it off."
       />
 
       <button className="primary" onClick={onRunDemo} disabled={loading}>
-        {loading ? "Forecasting…" : "Run demo forecast"}
+        {loading ? "Forecasting…" : "Run forecast"}
       </button>
 
       <div className="field">
-        <label>Or upload a ledger</label>
+        <label>Or upload your own data (CSV)</label>
         <button className="file-btn" disabled={loading}>
           {fileName ?? "Upload CSV"}
           <input

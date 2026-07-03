@@ -10,6 +10,7 @@ import {
   ProgressEvent,
   RunSummary,
   ScenarioInput,
+  clearRuns,
   fetchDemoForecast,
   fetchFxRates,
   fetchRun,
@@ -30,6 +31,7 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { RunHistory } from "@/components/RunHistory";
 import { ScenarioPanel } from "@/components/ScenarioPanel";
 import { SeriesPanel } from "@/components/SeriesPanel";
+import { TrustStrip } from "@/components/TrustStrip";
 import { ErrorState } from "@/components/StateViews";
 
 const DEFAULT_PARAMS: DemoParams = {
@@ -156,6 +158,17 @@ export default function Page() {
     }
   }, []);
 
+  const clearHistory = useCallback(async () => {
+    if (!window.confirm("Clear all saved runs? This cannot be undone.")) return;
+    try {
+      await clearRuns();
+      setActiveRunId(null);
+      refreshRuns();
+    } catch {
+      /* non-fatal: leave history as-is */
+    }
+  }, [refreshRuns]);
+
   const cycleFx = () => {
     setFxTo((prev) => {
       if (prev === null) return FX_CYCLE.find((c) => c !== data?.currency) ?? null;
@@ -175,9 +188,13 @@ export default function Page() {
     <main className="app">
       <header className="masthead">
         <div>
-          <h1>Cash-Flow-Forecaster</h1>
+          <h1>Cash-Flow Forecaster</h1>
           <div className="sub">
-            Probabilistic 13-week cash &amp; MRR forecasting · calibrated intervals · grounded briefings
+            See where your cash is heading over the next 13 weeks — with an honest
+            best estimate and a realistic range, not a blind guess.
+          </div>
+          <div className="sub-tech" title="The engineering underneath">
+            Probabilistic forecasting · calibrated intervals · backtested · AI briefing grounded in the numbers
           </div>
         </div>
         {data && (
@@ -213,6 +230,7 @@ export default function Page() {
             activeId={activeRunId}
             onSelect={selectRun}
             onRefresh={refreshRuns}
+            onClear={clearHistory}
             loading={false}
           />
 
@@ -220,11 +238,15 @@ export default function Page() {
             <AlertsBanner alerts={data.alerts} />
             <KpiCards data={data} fxTo={fxTo} rates={rates} />
 
+            <TrustStrip data={data} />
+
             <div className="panel">
               <div className="panel-head">
-                <h2>Cash balance projection</h2>
+                <h2>Where your cash is heading</h2>
                 <div className="head-actions">
-                  <span className="badge">P50 line · P10–P90 band</span>
+                  <span className="badge" title="The solid line is our best estimate; the shaded band is the likely range (8 in 10 outcomes).">
+                    best estimate + likely range
+                  </span>
                   <ExportBar data={data} />
                 </div>
               </div>
@@ -250,6 +272,15 @@ export default function Page() {
                 horizonWeeks={data.horizon_weeks}
               />
               <DriverBars drivers={data.drivers} currency={data.currency} />
+            </div>
+
+            <div className="section-label">
+              <h2>The detail behind the forecast</h2>
+              <p>
+                Each chart shows recent history and the forecast ahead. The solid
+                line is the best estimate; the shaded band is the likely range.
+                Badges show how accurate each one was when tested on past data.
+              </p>
             </div>
 
             <div className="series-grid">

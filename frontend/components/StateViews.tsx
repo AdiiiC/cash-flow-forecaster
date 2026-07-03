@@ -6,7 +6,7 @@ export function LoadingState({ label }: { label: string }) {
     <div className="state" role="status" aria-live="polite">
       <div className="spinner" aria-hidden />
       <h2>{label}</h2>
-      <p>Running walk-forward backtest and calibrating intervals.</p>
+      <p>Testing the forecast on your history and calibrating the range…</p>
     </div>
   );
 }
@@ -35,7 +35,7 @@ export function ErrorState({
 }) {
   return (
     <div className="state error" role="alert">
-      <h2>Could not build forecast</h2>
+      <h2>Couldn&apos;t build the forecast</h2>
       <p className="num">{message}</p>
       {onRetry && (
         <button onClick={onRetry} className="primary">
