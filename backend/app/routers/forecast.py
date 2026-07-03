@@ -31,11 +31,13 @@ router = APIRouter()
 def health() -> dict:
     settings = get_settings()
     active = provider.describe()
+    db = "postgres" if store._resolve_url().startswith("postgresql") else "sqlite"
     return {
         "status": "ok",
         "llm_enabled": settings.llm_enabled,
         "provider": active["provider"],
         "model": active["model"],
+        "db": db,
     }
 
 
