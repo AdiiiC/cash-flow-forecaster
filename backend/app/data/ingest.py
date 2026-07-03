@@ -15,6 +15,11 @@ from app.schemas import Direction, EntryStatus, Ledger, LedgerEntry
 
 REQUIRED = {"date", "amount", "direction"}
 
+# Hard ceiling on ingested rows. A weekly-granularity cash forecast never needs
+# six figures of transactions; anything larger is almost certainly abuse or a
+# malformed export, so we reject it rather than exhaust memory.
+MAX_ROWS = 100_000
+
 
 class IngestError(ValueError):
     """Raised when an uploaded CSV cannot be parsed into a valid Ledger."""
@@ -26,12 +31,15 @@ def parse_csv(
     currency: str = "USD",
 ) -> Ledger:
     try:
-        df = pd.read_csv(io.BytesIO(raw))
+        df = pd.read_csv(io.BytesIO(raw), nrows=MAX_ROWS + 1)
     except Exception as exc:  # noqa: BLE001 - surface any parse failure uniformly
         raise IngestError(f"Could not read CSV: {exc}") from exc
 
     if df.empty:
         raise IngestError("CSV contains no rows.")
+
+    if len(df) > MAX_ROWS:
+        raise IngestError(f"CSV too large: max {MAX_ROWS:,} rows supported.")
 
     df.columns = [str(c).strip().lower() for c in df.columns]
     missing = REQUIRED - set(df.columns)

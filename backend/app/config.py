@@ -33,19 +33,19 @@ class Settings(BaseSettings):
     anthropic_model: str = ""
 
     frontend_origin: str = "http://localhost:3000"
-    # Optional regex to allow dynamic origins (e.g. Vercel preview deploys):
-    #   https://cash-flow-forecaster-biz.*\.vercel\.app
+    # Optional regex for matching preview/deploy origins (e.g. Vercel previews).
+    # Example: https://cash-flow-forecaster.*\.vercel\.app
     frontend_origin_regex: str = ""
-
-    @property
-    def frontend_origins(self) -> list[str]:
-        """Allow a comma-separated list of exact origins."""
-        return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
 
     # Forecasting defaults
     horizon_weeks: int = 13
     # Number of walk-forward origins used for backtesting / conformal residuals.
     backtest_origins: int = 8
+
+    @property
+    def frontend_origins(self) -> list[str]:
+        """Allow a comma-separated list of exact origins in FRONTEND_ORIGIN."""
+        return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
 
     @property
     def any_llm_key(self) -> bool:

@@ -300,6 +300,92 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* ---- Runway hero ---- */
+.runway-hero {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.runway-hero.ok {
+  border-left-color: var(--pos);
+}
+.runway-hero.warn {
+  border-left-color: var(--neg);
+}
+.runway-headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.runway-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.runway-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+.runway-number {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+.runway-hero.ok .runway-number {
+  color: var(--pos);
+}
+.runway-hero.warn .runway-number {
+  color: var(--neg);
+}
+.runway-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.runway-pill {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.runway-pill.ok {
+  color: var(--pos);
+  border-color: color-mix(in srgb, var(--pos) 45%, transparent);
+  background: color-mix(in srgb, var(--pos) 12%, transparent);
+}
+.runway-pill.warn {
+  color: var(--neg);
+  border-color: color-mix(in srgb, var(--neg) 45%, transparent);
+  background: color-mix(in srgb, var(--neg) 12%, transparent);
+}
+.runway-recs {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.runway-rec {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.runway-rec .rec-icon {
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
 /* ---- KPI grid ---- */
 .kpis {
   display: grid;

@@ -179,6 +179,24 @@ class Thresholds(BaseModel):
     min_runway_weeks: float | None = None  # alert if runway shorter than this
 
 
+class Recommendation(BaseModel):
+    """A deterministic, plain-English next step derived from the numbers."""
+
+    kind: str  # "cut" | "afford" | "info"
+    message: str
+    value: float | None = None  # the underlying figure (monthly), if any
+
+
+class RunwayInsight(BaseModel):
+    """Businessman-facing runway summary: how long, until when, and what to do."""
+
+    runway_weeks: float | None
+    runway_months: float | None
+    runway_date: date | None  # projected date the cash balance hits zero (p50)
+    solvent: bool  # true when cash never goes negative over the horizon
+    recommendations: list[Recommendation] = Field(default_factory=list)
+
+
 class ForecastResponse(BaseModel):
     generated_at: datetime
     as_of: date
@@ -195,6 +213,7 @@ class ForecastResponse(BaseModel):
     calibration: IntervalCalibration | None = None
     alerts: list[Alert] = Field(default_factory=list)
     scenario: ScenarioResult | None = None
+    insight: RunwayInsight | None = None
 
 
 class RunSummary(BaseModel):

@@ -17,12 +17,22 @@ from app.schemas import ForecastResponse, RunSummary
 
 _DB_PATH = Path(__file__).resolve().parent.parent / "runs.db"
 _LOCK = threading.Lock()
+_INITIALIZED = False
 
 
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _ensure() -> None:
+    """Create the schema on first use (idempotent, thread-safe, no import side effect)."""
+    global _INITIALIZED
+    if _INITIALIZED:
+        return
+    init_db()
+    _INITIALIZED = True
 
 
 def init_db() -> None:
@@ -46,6 +56,7 @@ def init_db() -> None:
 
 
 def save_run(response: ForecastResponse, source: str, label: str) -> str:
+    _ensure()
     run_id = uuid.uuid4().hex[:12]
     with _LOCK, _connect() as conn:
         conn.execute(
@@ -71,6 +82,7 @@ def save_run(response: ForecastResponse, source: str, label: str) -> str:
 
 
 def list_runs(limit: int = 25) -> list[RunSummary]:
+    _ensure()
     with _LOCK, _connect() as conn:
         rows = conn.execute(
             "SELECT id, created_at, source, currency, horizon_weeks, opening_balance, "
@@ -95,6 +107,7 @@ def list_runs(limit: int = 25) -> list[RunSummary]:
 
 
 def get_run(run_id: str) -> ForecastResponse | None:
+    _ensure()
     with _LOCK, _connect() as conn:
         row = conn.execute("SELECT payload FROM runs WHERE id = ?", (run_id,)).fetchone()
     if row is None:
@@ -104,12 +117,7 @@ def get_run(run_id: str) -> ForecastResponse | None:
 
 def clear_runs() -> int:
     """Delete all saved runs. Returns the number of rows removed."""
+    _ensure()
     with _LOCK, _connect() as conn:
         cur = conn.execute("DELETE FROM runs")
         return cur.rowcount if cur.rowcount is not None else 0
-
-
-# Ensure the schema exists as soon as this module is imported, so a request that
-# arrives before the FastAPI startup hook (or after the db file is removed) still
-# finds the table. CREATE TABLE IF NOT EXISTS makes this safe to run repeatedly.
-init_db()

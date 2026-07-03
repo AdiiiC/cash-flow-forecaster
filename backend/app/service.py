@@ -6,6 +6,8 @@ overlay) is applied on top every call so those toggles feel instant.
 """
 from __future__ import annotations
 
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Callable
 
@@ -16,6 +18,7 @@ from app.analytics.categories import analyze_categories
 from app.config import get_settings
 from app.data.aggregate import weekly_series
 from app.forecasting.pipeline import run_series_forecast
+from app.insights import build_insight
 from app.llm.narrative import build_narrative
 from app.schemas import (
     ForecastResponse,
@@ -25,6 +28,8 @@ from app.schemas import (
     SeriesForecast,
     Thresholds,
 )
+
+logger = logging.getLogger("cashflow.service")
 
 SERIES_LABELS = {
     "net_cash_flow": "Net cash flow",
@@ -66,20 +71,35 @@ def build_base_forecast(
     horizon = horizon or settings.horizon_weeks
     series_map = weekly_series(ledger)
 
-    forecasts: list[SeriesForecast] = []
-    for i, name in enumerate(_ORDER):
-        if progress:
-            progress(0.1 + 0.7 * (i / len(_ORDER)), f"Backtesting {SERIES_LABELS[name]}")
-        forecasts.append(
-            run_series_forecast(
-                series=series_map[name],
-                name=name,
-                label=SERIES_LABELS[name],
-                horizon=horizon,
-                n_origins=settings.backtest_origins,
-                unit=ledger.currency if name != "mrr" else f"{ledger.currency}/mo",
-            )
+    def _run(name: str) -> SeriesForecast:
+        return run_series_forecast(
+            series=series_map[name],
+            name=name,
+            label=SERIES_LABELS[name],
+            horizon=horizon,
+            n_origins=settings.backtest_origins,
+            unit=ledger.currency if name != "mrr" else f"{ledger.currency}/mo",
         )
+
+    # The four series are independent backtests; run them in parallel. The heavy
+    # numeric work (numpy/sklearn) releases the GIL, so threads give a real ~4x
+    # speedup without the overhead or pickling cost of processes.
+    results: dict[str, SeriesForecast] = {}
+    if progress:
+        progress(0.1, "Backtesting cash-flow series")
+    with ThreadPoolExecutor(max_workers=len(_ORDER)) as pool:
+        futures = {pool.submit(_run, name): name for name in _ORDER}
+        done = 0
+        for future in as_completed(futures):
+            name = futures[future]
+            results[name] = future.result()
+            done += 1
+            if progress:
+                progress(
+                    0.1 + 0.7 * (done / len(_ORDER)),
+                    f"Backtested {done}/{len(_ORDER)} series",
+                )
+    forecasts: list[SeriesForecast] = [results[name] for name in _ORDER]
 
     net = next(f for f in forecasts if f.name == "net_cash_flow")
     inflow = next(f for f in forecasts if f.name == "inflow")
@@ -129,6 +149,15 @@ def build_base_forecast(
         progress(0.92, "Writing CFO briefing")
     narrative = build_narrative(values, ledger.currency)
 
+    insight = build_insight(
+        as_of=as_of,
+        opening_balance=ledger.opening_balance,
+        net_forecast=net.forecast,
+        runway_weeks=runway_weeks,
+        horizon=horizon,
+        currency=ledger.currency,
+    )
+
     return ForecastResponse(
         generated_at=datetime.utcnow(),
         as_of=as_of,
@@ -142,6 +171,7 @@ def build_base_forecast(
         categories=categories,
         drivers=drivers,
         calibration=calibration,
+        insight=insight,
     )
 
 
@@ -187,8 +217,8 @@ def build_forecast(
         run_label = label or f"{source} · {ledger.currency} · {h}w"
         try:
             store.save_run(result, source=source, label=run_label)
-        except Exception:  # noqa: BLE001 - persistence must never break a forecast
-            pass
+        except Exception as exc:  # noqa: BLE001 - persistence must never break a forecast
+            logger.warning("Failed to persist forecast run: %s", exc, exc_info=True)
 
     if progress:
         progress(1.0, "Done")

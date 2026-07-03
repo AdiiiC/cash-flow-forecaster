@@ -96,6 +96,20 @@ export interface Thresholds {
   min_runway_weeks?: number | null;
 }
 
+export interface Recommendation {
+  kind: "cut" | "afford" | "info";
+  message: string;
+  value?: number | null;
+}
+
+export interface RunwayInsight {
+  runway_weeks: number | null;
+  runway_months: number | null;
+  runway_date: string | null;
+  solvent: boolean;
+  recommendations: Recommendation[];
+}
+
 export interface ForecastResponse {
   generated_at: string;
   as_of: string;
@@ -112,6 +126,7 @@ export interface ForecastResponse {
   calibration: IntervalCalibration | null;
   alerts: Alert[];
   scenario: ScenarioResult | null;
+  insight: RunwayInsight | null;
 }
 
 export interface RunSummary {
@@ -132,8 +147,19 @@ export interface FxRates {
   as_of: string;
 }
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "");
+
+if (!RAW_API_BASE && process.env.NODE_ENV === "production") {
+  // Fail loud: a production build without an API base is a deploy misconfiguration.
+  // eslint-disable-next-line no-console
+  console.error(
+    "[config] NEXT_PUBLIC_API_BASE is not set. API calls will fail. " +
+      "Set it to your backend URL in the hosting environment and redeploy.",
+  );
+}
+
+/** Absolute backend origin. Shared so every caller stays in sync (no duplication). */
+export const API_BASE = RAW_API_BASE ?? "http://localhost:8000";
 
 export class ApiError extends Error {}
 

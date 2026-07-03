@@ -29,6 +29,7 @@ import { KpiCards } from "@/components/KpiCards";
 import { NarrativePanel } from "@/components/NarrativePanel";
 import { ProgressBar } from "@/components/ProgressBar";
 import { RunHistory } from "@/components/RunHistory";
+import { RunwayHero } from "@/components/RunwayHero";
 import { ScenarioPanel } from "@/components/ScenarioPanel";
 import { SeriesPanel } from "@/components/SeriesPanel";
 import { TrustStrip } from "@/components/TrustStrip";
@@ -236,6 +237,7 @@ export default function Page() {
 
           <div className="content">
             <AlertsBanner alerts={data.alerts} />
+            <RunwayHero data={data} />
             <KpiCards data={data} fxTo={fxTo} rates={rates} />
 
             <TrustStrip data={data} />

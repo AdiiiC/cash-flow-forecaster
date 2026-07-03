@@ -1,6 +1,6 @@
 "use client";
 
-import { RunSummary } from "@/lib/api";
+import { API_BASE, RunSummary } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
 interface Props {
@@ -11,9 +11,6 @@ interface Props {
   onClear: () => void;
   loading: boolean;
 }
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://localhost:8000";
 
 export function RunHistory({ runs, activeId, onSelect, onRefresh, onClear, loading }: Props) {
   return (
