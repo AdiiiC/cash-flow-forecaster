@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     def effective_jwt_secret(self) -> str:
         return self.jwt_secret.strip() or "dev-insecure-secret-change-me"
 
+    # ---- Notifications -----------------------------------------------------
+    # Slack Incoming Webhook URL. When set, threshold alerts (critical/warning)
+    # are posted to the configured channel. Empty disables Slack notifications.
+    slack_webhook_url: str = ""
+
     # Persistence. When set (e.g. a Supabase/Neon Postgres URL) run history is
     # stored there and survives redeploys. When empty, we fall back to a local
     # SQLite file so local dev and tests need no external database.

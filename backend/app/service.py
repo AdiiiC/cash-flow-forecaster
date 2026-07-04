@@ -20,6 +20,7 @@ from app.data.aggregate import weekly_series
 from app.forecasting.pipeline import run_series_forecast
 from app.insights import build_insight
 from app.llm.narrative import build_narrative
+from app.notifications import slack
 from app.schemas import (
     ForecastResponse,
     IntervalCalibration,
@@ -220,6 +221,9 @@ def build_forecast(
             store.save_run(result, source=source, label=run_label, user_id=user_id)
         except Exception as exc:  # noqa: BLE001 - persistence must never break a forecast
             logger.warning("Failed to persist forecast run: %s", exc, exc_info=True)
+
+    # Fire-and-forget Slack alerts (no-op unless SLACK_WEBHOOK_URL is set).
+    slack.notify_alerts(result, source)
 
     if progress:
         progress(1.0, "Done")
