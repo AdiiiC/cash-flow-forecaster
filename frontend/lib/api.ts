@@ -419,3 +419,47 @@ export async function fetchFxRates(): Promise<FxRates> {
   if (!res.ok) throw new ApiError(`Could not load FX rates (${res.status})`);
   return (await res.json()) as FxRates;
 }
+
+/* ---- Saved scenarios (auth required) ------------------------------------- */
+
+export interface SavedScenario {
+  id: string;
+  name: string;
+  scenario: ScenarioInput;
+  created_at: string;
+}
+
+export async function listScenarios(): Promise<SavedScenario[]> {
+  if (!getToken()) return [];
+  const res = await fetch(`${API_BASE}/api/scenarios`, { headers: authHeaders() });
+  if (res.status === 401) return [];
+  if (!res.ok) throw new ApiError(`Could not load saved scenarios (${res.status})`);
+  return (await res.json()) as SavedScenario[];
+}
+
+export async function saveScenario(name: string, scenario: ScenarioInput): Promise<SavedScenario> {
+  const res = await fetch(`${API_BASE}/api/scenarios`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ name, scenario }),
+  });
+  if (!res.ok) {
+    let detail = `Could not save scenario (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : detail;
+    } catch {
+      /* keep default */
+    }
+    throw new ApiError(detail);
+  }
+  return (await res.json()) as SavedScenario;
+}
+
+export async function deleteScenario(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/scenarios/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new ApiError(`Could not delete scenario (${res.status})`);
+}

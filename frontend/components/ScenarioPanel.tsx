@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import {
   Line,
   LineChart,
@@ -10,7 +11,18 @@ import {
   YAxis,
 } from "recharts";
 
-import { ForecastResponse, ScenarioInput, SeriesForecast } from "@/lib/api";
+import {
+  ApiError,
+  ForecastResponse,
+  SavedScenario,
+  ScenarioInput,
+  SeriesForecast,
+  deleteScenario,
+  isAuthenticated,
+  listScenarios,
+  onAuthChange,
+  saveScenario,
+} from "@/lib/api";
 import { NumberField } from "@/components/NumberField";
 import { formatCurrency, formatWeekLabel } from "@/lib/format";
 
@@ -33,10 +45,127 @@ function balancePath(opening: number, net: SeriesForecast, asOf: string): { peri
   return rows;
 }
 
+/**
+ * A saved-scenarios drawer: name and store the current what-if as a reusable
+ * preset (per user), then reload or delete presets. Only meaningful when signed
+ * in; anonymous visitors get a gentle prompt instead.
+ */
+function SavedScenarios({
+  input,
+  onLoad,
+  disabled,
+}: {
+  input: ScenarioInput;
+  onLoad: (s: ScenarioInput) => void;
+  disabled: boolean;
+}) {
+  const [authed, setAuthed] = useState(false);
+  const [items, setItems] = useState<SavedScenario[]>([]);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(() => {
+    if (!isAuthenticated()) {
+      setAuthed(false);
+      setItems([]);
+      return;
+    }
+    setAuthed(true);
+    listScenarios()
+      .then(setItems)
+      .catch(() => setItems([]));
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    return onAuthChange(refresh);
+  }, [refresh]);
+
+  const save = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setError("");
+    try {
+      const saved = await saveScenario(trimmed, input);
+      setItems((prev) => [saved, ...prev]);
+      setName("");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not save scenario.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await deleteScenario(id);
+      setItems((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      /* non-fatal */
+    }
+  };
+
+  if (!authed) {
+    return (
+      <div className="saved-scenarios">
+        <div className="saved-hint">Sign in to save what-if scenarios and reuse them later.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="saved-scenarios">
+      <div className="saved-head">Saved scenarios</div>
+      <div className="saved-save">
+        <input
+          type="text"
+          placeholder="Name this scenario…"
+          value={name}
+          maxLength={120}
+          disabled={disabled || busy}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+        />
+        <button className="ghost" onClick={save} disabled={disabled || busy || !name.trim()}>
+          {busy ? "Saving…" : "Save current"}
+        </button>
+      </div>
+      {error && <div className="saved-error">{error}</div>}
+      {items.length === 0 ? (
+        <div className="saved-empty">No saved scenarios yet.</div>
+      ) : (
+        <ul className="saved-list">
+          {items.map((s) => (
+            <li key={s.id} className="saved-item">
+              <button
+                className="saved-load"
+                onClick={() => onLoad(s.scenario)}
+                disabled={disabled}
+                title="Load this scenario"
+              >
+                {s.name}
+              </button>
+              <button
+                className="saved-del"
+                onClick={() => remove(s.id)}
+                aria-label={`Delete ${s.name}`}
+                title="Delete"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading }: Props) {
   const result = data.scenario;
   const set = (key: keyof ScenarioInput) => (v: number) => onChange({ ...input, [key]: v });
-
   const baseNet = data.series.find((s) => s.name === "net_cash_flow");
   const scenNet = result?.series.find((s) => s.name === "net_cash_flow");
 
@@ -128,6 +257,8 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
           )}
         </div>
       </div>
+
+      <SavedScenarios input={input} onLoad={onChange} disabled={loading} />
 
       {result && (
         <>

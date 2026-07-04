@@ -271,6 +271,26 @@ class TokenResponse(BaseModel):
     user: UserPublic
 
 
+class ScenarioCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    scenario: ScenarioInput
+
+    @field_validator("name")
+    @classmethod
+    def _clean_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Give the scenario a name.")
+        return v
+
+
+class SavedScenario(BaseModel):
+    id: str
+    name: str
+    scenario: ScenarioInput
+    created_at: datetime
+
+
 class SyntheticRequest(BaseModel):
     weeks: int = Field(104, ge=26, le=520)
     seed: int = 42

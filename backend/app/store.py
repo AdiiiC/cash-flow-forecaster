@@ -69,6 +69,16 @@ _users = Table(
     Column("created_at", String(40), nullable=False),
 )
 
+_scenarios = Table(
+    "scenarios",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("name", String(120), nullable=False),
+    Column("payload", Text, nullable=False),  # ScenarioInput as JSON
+    Column("created_at", String(40), nullable=False),
+)
+
 
 def _resolve_url() -> str:
     """Pick the connection URL and normalise it for the psycopg 3 driver."""
@@ -243,3 +253,54 @@ def get_user_by_id(user_id: str) -> dict | None:
     with _engine().connect() as conn:
         row = conn.execute(stmt).mappings().first()
     return dict(row) if row else None
+
+
+# ---- Saved scenarios ----------------------------------------------------------
+
+
+def save_scenario(user_id: str, name: str, scenario_json: str) -> dict:
+    """Persist a named what-if preset for a user. Returns the stored record."""
+    _ensure()
+    scenario_id = uuid.uuid4().hex[:12]
+    created_at = datetime.utcnow().isoformat()
+    with _engine().begin() as conn:
+        conn.execute(
+            insert(_scenarios).values(
+                id=scenario_id,
+                user_id=user_id,
+                name=name,
+                payload=scenario_json,
+                created_at=created_at,
+            )
+        )
+    return {"id": scenario_id, "name": name, "payload": scenario_json, "created_at": created_at}
+
+
+def list_scenarios(user_id: str) -> list[dict]:
+    _ensure()
+    stmt = (
+        select(
+            _scenarios.c.id,
+            _scenarios.c.name,
+            _scenarios.c.payload,
+            _scenarios.c.created_at,
+        )
+        .where(_scenarios.c.user_id == user_id)
+        .order_by(_scenarios.c.created_at.desc())
+    )
+    with _engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def delete_scenario(scenario_id: str, user_id: str) -> bool:
+    """Delete a user's saved scenario. Returns True if a row was removed."""
+    _ensure()
+    with _engine().begin() as conn:
+        result = conn.execute(
+            delete(_scenarios).where(
+                _scenarios.c.id == scenario_id, _scenarios.c.user_id == user_id
+            )
+        )
+    return bool(result.rowcount)
+

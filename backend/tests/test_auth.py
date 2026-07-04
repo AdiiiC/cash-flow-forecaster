@@ -47,6 +47,49 @@ def test_short_password_rejected():
     assert r.status_code == 422
 
 
+def test_saved_scenarios_flow():
+    # Register two users; saved scenarios are private per user.
+    t1 = client.post(
+        "/api/auth/register", json={"email": _email(), "password": "secret12345"}
+    ).json()["access_token"]
+    t2 = client.post(
+        "/api/auth/register", json={"email": _email(), "password": "secret12345"}
+    ).json()["access_token"]
+    h1 = {"Authorization": f"Bearer {t1}"}
+    h2 = {"Authorization": f"Bearer {t2}"}
+
+    # Auth is required.
+    assert client.get("/api/scenarios").status_code == 401
+
+    payload = {
+        "name": "Aggressive growth",
+        "scenario": {"label": "Aggressive", "revenue_growth_pct": 5.0, "cost_multiplier": 1.1},
+    }
+    created = client.post("/api/scenarios", json=payload, headers=h1)
+    assert created.status_code == 201, created.text
+    sid = created.json()["id"]
+    assert created.json()["scenario"]["revenue_growth_pct"] == 5.0
+
+    # Owner sees it; the other user does not.
+    assert [s["id"] for s in client.get("/api/scenarios", headers=h1).json()] == [sid]
+    assert client.get("/api/scenarios", headers=h2).json() == []
+
+    # A blank name is rejected.
+    assert (
+        client.post(
+            "/api/scenarios",
+            json={"name": "  ", "scenario": payload["scenario"]},
+            headers=h1,
+        ).status_code
+        == 422
+    )
+
+    # Another user cannot delete it; the owner can.
+    assert client.delete(f"/api/scenarios/{sid}", headers=h2).status_code == 404
+    assert client.delete(f"/api/scenarios/{sid}", headers=h1).status_code == 200
+    assert client.get("/api/scenarios", headers=h1).json() == []
+
+
 def test_runs_are_scoped_per_user():
     # Two users each own a saved run; neither sees the other's.
     from app.schemas import ForecastResponse

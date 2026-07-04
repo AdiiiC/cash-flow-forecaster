@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import auth, forecast
+from app.routers import auth, forecast, scenarios
 from app.store import init_db
 
 settings = get_settings()
@@ -59,6 +59,7 @@ async def rate_limit(request: Request, call_next):
 
 app.include_router(forecast.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(scenarios.router, prefix="/api")
 
 
 @app.on_event("startup")
