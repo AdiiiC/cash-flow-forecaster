@@ -128,6 +128,7 @@ export interface ForecastResponse {
   scenario: ScenarioResult | null;
   insight: RunwayInsight | null;
   recurring: RecurringImpact | null;
+  receivables: InvoiceImpact | null;
 }
 
 export interface RunSummary {
@@ -531,4 +532,85 @@ export async function deleteRecurring(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) throw new ApiError(`Could not delete recurring item (${res.status})`);
+}
+
+// ---- Invoices & bills (AR / AP) ---------------------------------------------
+
+export type InvoiceKind = "receivable" | "payable";
+export type InvoiceStatus = "open" | "paid" | "void";
+
+export interface InvoiceImpact {
+  count: number;
+  overdue_count: number;
+  expected_inflow: number;
+  expected_outflow: number;
+  net_total: number;
+}
+
+export interface Invoice {
+  id: string;
+  kind: InvoiceKind;
+  counterparty: string;
+  amount: number;
+  issue_date: string;
+  due_date: string;
+  category: string | null;
+  status: InvoiceStatus;
+  overdue: boolean;
+  created_at: string;
+}
+
+export interface InvoiceInput {
+  kind: InvoiceKind;
+  counterparty: string;
+  amount: number;
+  issue_date: string;
+  due_date: string;
+  category?: string | null;
+  status?: InvoiceStatus;
+}
+
+export async function listInvoices(): Promise<Invoice[]> {
+  if (!getToken()) return [];
+  const res = await fetch(`${API_BASE}/api/invoices`, { headers: authHeaders() });
+  if (res.status === 401) return [];
+  if (!res.ok) throw new ApiError(`Could not load invoices (${res.status})`);
+  return (await res.json()) as Invoice[];
+}
+
+export async function createInvoice(item: InvoiceInput): Promise<Invoice> {
+  const res = await fetch(`${API_BASE}/api/invoices`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) {
+    let detail = `Could not save invoice (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : detail;
+    } catch {
+      /* keep default */
+    }
+    throw new ApiError(detail);
+  }
+  return (await res.json()) as Invoice;
+}
+
+export async function setInvoiceStatus(id: string, status: InvoiceStatus): Promise<Invoice> {
+  const res = await fetch(`${API_BASE}/api/invoices/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new ApiError(`Could not update invoice (${res.status})`);
+  return (await res.json()) as Invoice;
+}
+
+export async function deleteInvoice(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/invoices/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new ApiError(`Could not delete invoice (${res.status})`);
 }

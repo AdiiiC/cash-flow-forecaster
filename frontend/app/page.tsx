@@ -26,6 +26,7 @@ import { CategoryWaterfall } from "@/components/CategoryWaterfall";
 import { Controls } from "@/components/Controls";
 import { DriverBars } from "@/components/DriverBars";
 import { ExportBar } from "@/components/ExportBar";
+import { InvoicesPanel } from "@/components/InvoicesPanel";
 import { KpiCards } from "@/components/KpiCards";
 import { NarrativePanel } from "@/components/NarrativePanel";
 import { ProgressBar } from "@/components/ProgressBar";
@@ -286,6 +287,8 @@ export default function Page() {
             />
 
             <RecurringPanel data={data} onChanged={reforecastRecurring} />
+
+            <InvoicesPanel data={data} onChanged={reforecastRecurring} />
 
             <div className="two-col">
               <CategoryWaterfall

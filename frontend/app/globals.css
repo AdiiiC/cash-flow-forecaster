@@ -1539,3 +1539,117 @@ button:disabled {
     display: none;
   }
 }
+
+/* ---- Invoices & bills ------------------------------------------------------ */
+.invoice-form {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr 1fr auto auto auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+.invoice-form input,
+.invoice-form select {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  min-width: 0;
+  width: 100%;
+}
+.invoice-form input:focus,
+.invoice-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.if-date {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+.invoice-form .rf-add {
+  white-space: nowrap;
+  height: 35px;
+}
+@media (max-width: 860px) {
+  .invoice-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .invoice-form .if-party {
+    grid-column: 1 / -1;
+  }
+}
+
+.invoice-item {
+  display: grid;
+  grid-template-columns: 12px 1.8fr 1fr auto auto 24px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ink-700);
+  font-size: 13px;
+}
+.invoice-item.payable .rl-dot {
+  background: var(--neg);
+}
+.invoice-item.receivable .rl-dot {
+  background: var(--pos);
+}
+.invoice-item.settled {
+  opacity: 0.55;
+}
+.rl-overdue {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--neg);
+  border: 1px solid color-mix(in srgb, var(--neg) 45%, var(--line));
+  background: color-mix(in srgb, var(--neg) 12%, var(--ink-700));
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.rl-paid {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.invoice-paid-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.invoice-paid-btn:hover {
+  color: var(--pos);
+  border-color: var(--pos);
+}
+.invoice-paid-spacer {
+  display: inline-block;
+}
+@media (max-width: 860px) {
+  .invoice-item {
+    grid-template-columns: 12px 1fr auto 24px;
+  }
+  .invoice-item .rl-anchor,
+  .invoice-item .invoice-paid-btn,
+  .invoice-item .invoice-paid-spacer {
+    display: none;
+  }
+}

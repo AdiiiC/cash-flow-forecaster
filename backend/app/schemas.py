@@ -223,6 +223,69 @@ class RecurringImpact(BaseModel):
     net_total: float  # inflow_total - outflow_total
 
 
+class InvoiceKind(str, Enum):
+    receivable = "receivable"  # money you're owed (AR) -> expected inflow
+    payable = "payable"  # money you owe (AP) -> expected outflow
+
+
+class InvoiceStatus(str, Enum):
+    open = "open"
+    paid = "paid"
+    void = "void"
+
+
+class InvoiceInput(BaseModel):
+    """A single expected cash event tied to a counterparty and a due date."""
+
+    kind: InvoiceKind
+    counterparty: str = Field(..., min_length=1, max_length=120)
+    amount: float = Field(..., gt=0)
+    issue_date: date
+    due_date: date
+    category: str | None = Field(default=None, max_length=60)
+    status: InvoiceStatus = InvoiceStatus.open
+
+    @field_validator("counterparty")
+    @classmethod
+    def _strip_counterparty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("counterparty must not be blank.")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def _strip_inv_category(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None
+
+    @field_validator("due_date")
+    @classmethod
+    def _due_after_issue(cls, v: date, info) -> date:
+        issue = info.data.get("issue_date")
+        if issue is not None and v < issue:
+            raise ValueError("due_date must be on or after issue_date.")
+        return v
+
+
+class Invoice(InvoiceInput):
+    id: str
+    created_at: datetime
+    overdue: bool = False  # derived: open and past its due date
+
+
+class InvoiceImpact(BaseModel):
+    """Summary of open AR/AP folded into the forecast (UI transparency)."""
+
+    count: int  # open invoices/bills contributing within the horizon
+    overdue_count: int  # of those, how many are past due
+    expected_inflow: float  # open receivables total within horizon
+    expected_outflow: float  # open payables total within horizon
+    net_total: float  # expected_inflow - expected_outflow
+
+
 class Thresholds(BaseModel):
     min_balance: float | None = None  # alert if projected balance dips below this
     min_runway_weeks: float | None = None  # alert if runway shorter than this
@@ -264,6 +327,7 @@ class ForecastResponse(BaseModel):
     scenario: ScenarioResult | None = None
     insight: RunwayInsight | None = None
     recurring: RecurringImpact | None = None  # scheduled items folded into the projection
+    receivables: InvoiceImpact | None = None  # open AR/AP folded into the projection
 
 
 class RunSummary(BaseModel):

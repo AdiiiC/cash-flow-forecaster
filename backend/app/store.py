@@ -105,6 +105,21 @@ _recurring = Table(
     Column("created_at", String(40), nullable=False),
 )
 
+_invoices = Table(
+    "invoices",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("kind", String(16), nullable=False),  # receivable | payable
+    Column("counterparty", Text, nullable=False),  # encrypted at rest
+    Column("amount", Float, nullable=False),
+    Column("issue_date", String(20), nullable=False),  # ISO
+    Column("due_date", String(20), nullable=False),  # ISO
+    Column("status", String(16), nullable=False, default="open"),  # open | paid | void
+    Column("category", String(60), nullable=True),
+    Column("created_at", String(40), nullable=False),
+)
+
 
 def _resolve_url() -> str:
     """Pick the connection URL and normalise it for the psycopg 3 driver."""
@@ -445,6 +460,94 @@ def delete_recurring(item_id: str, user_id: str) -> bool:
         result = conn.execute(
             delete(_recurring).where(
                 _recurring.c.id == item_id, _recurring.c.user_id == user_id
+            )
+        )
+    return bool(result.rowcount)
+
+
+# ---- Invoices & bills (AR / AP) -----------------------------------------------
+
+
+def _invoice_to_dict(row) -> dict:
+    from app.security import crypto
+
+    d = dict(row)
+    d["counterparty"] = crypto.decrypt(d["counterparty"])
+    return d
+
+
+def save_invoice(
+    user_id: str,
+    *,
+    kind: str,
+    counterparty: str,
+    amount: float,
+    issue_date: str,
+    due_date: str,
+    status: str,
+    category: str | None,
+) -> dict:
+    from app.security import crypto
+
+    _ensure()
+    inv_id = uuid.uuid4().hex[:12]
+    created_at = datetime.utcnow().isoformat()
+    with _engine().begin() as conn:
+        conn.execute(
+            insert(_invoices).values(
+                id=inv_id,
+                user_id=user_id,
+                kind=kind,
+                counterparty=crypto.encrypt(counterparty),
+                amount=amount,
+                issue_date=issue_date,
+                due_date=due_date,
+                status=status,
+                category=category,
+                created_at=created_at,
+            )
+        )
+    return get_invoice(inv_id, user_id)
+
+
+def get_invoice(invoice_id: str, user_id: str) -> dict | None:
+    _ensure()
+    stmt = select(_invoices).where(
+        _invoices.c.id == invoice_id, _invoices.c.user_id == user_id
+    )
+    with _engine().connect() as conn:
+        row = conn.execute(stmt).mappings().first()
+    return _invoice_to_dict(row) if row else None
+
+
+def list_invoices(user_id: str, *, open_only: bool = False) -> list[dict]:
+    _ensure()
+    stmt = select(_invoices).where(_invoices.c.user_id == user_id)
+    if open_only:
+        stmt = stmt.where(_invoices.c.status == "open")
+    stmt = stmt.order_by(_invoices.c.due_date.asc())
+    with _engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [_invoice_to_dict(r) for r in rows]
+
+
+def set_invoice_status(invoice_id: str, user_id: str, status: str) -> bool:
+    _ensure()
+    with _engine().begin() as conn:
+        result = conn.execute(
+            _invoices.update()
+            .where(_invoices.c.id == invoice_id, _invoices.c.user_id == user_id)
+            .values(status=status)
+        )
+    return bool(result.rowcount)
+
+
+def delete_invoice(invoice_id: str, user_id: str) -> bool:
+    _ensure()
+    with _engine().begin() as conn:
+        result = conn.execute(
+            delete(_invoices).where(
+                _invoices.c.id == invoice_id, _invoices.c.user_id == user_id
             )
         )
     return bool(result.rowcount)

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import auth, forecast, recurring, scenarios
+from app.routers import auth, forecast, invoices, recurring, scenarios
 from app.store import init_db
 
 settings = get_settings()
@@ -61,6 +61,7 @@ app.include_router(forecast.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(recurring.router, prefix="/api")
+app.include_router(invoices.router, prefix="/api")
 
 
 @app.on_event("startup")

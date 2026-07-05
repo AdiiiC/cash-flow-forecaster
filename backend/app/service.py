@@ -14,6 +14,7 @@ from typing import Callable
 from app import alerts as alerts_mod
 from app import cache, store
 from app import recurring as recurring_mod
+from app import receivables as receivables_mod
 from app import scenario as scenario_mod
 from app.analytics.categories import analyze_categories
 from app.config import get_settings
@@ -25,6 +26,7 @@ from app.notifications import slack
 from app.schemas import (
     ForecastResponse,
     IntervalCalibration,
+    Invoice,
     Ledger,
     RecurringItem,
     ScenarioInput,
@@ -184,12 +186,15 @@ def finalize(
     scenario: ScenarioInput | None,
     cached: bool,
     recurring_items: list | None = None,
+    invoices: list | None = None,
 ) -> ForecastResponse:
-    """Apply the cheap per-request layer: cache flag, recurring overlay, alerts, scenario."""
+    """Apply the cheap per-request layer: cache flag, overlays, alerts, scenario."""
     result = base.model_copy(deep=True)
     result.cached = cached
     if recurring_items:
         recurring_mod.apply_recurring(result, recurring_items)
+    if invoices:
+        receivables_mod.apply_receivables(result, invoices)
     result.alerts = alerts_mod.evaluate(result, thresholds)
     if scenario is not None:
         result.scenario = scenario_mod.apply_scenario(result, scenario)
@@ -205,6 +210,18 @@ def _load_recurring_items(user_id: str | None) -> list[RecurringItem]:
         return [RecurringItem.model_validate(r) for r in rows]
     except Exception as exc:  # noqa: BLE001 - overlay must never break a forecast
         logger.warning("Failed to load recurring items: %s", exc, exc_info=True)
+        return []
+
+
+def _load_open_invoices(user_id: str | None) -> list[Invoice]:
+    """Fetch a user's open invoices/bills as validated models (empty if anon)."""
+    if not user_id:
+        return []
+    try:
+        rows = store.list_invoices(user_id, open_only=True)
+        return [Invoice.model_validate(r) for r in rows]
+    except Exception as exc:  # noqa: BLE001 - overlay must never break a forecast
+        logger.warning("Failed to load invoices: %s", exc, exc_info=True)
         return []
 
 
@@ -230,7 +247,8 @@ def build_forecast(
         base, cached = build_base_forecast(ledger, h, progress), False
 
     recurring_items = _load_recurring_items(user_id)
-    result = finalize(base, thresholds, scenario, cached, recurring_items)
+    invoices = _load_open_invoices(user_id)
+    result = finalize(base, thresholds, scenario, cached, recurring_items, invoices)
 
     if persist:
         run_label = label or f"{source} · {ledger.currency} · {h}w"
