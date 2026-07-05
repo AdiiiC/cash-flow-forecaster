@@ -16,7 +16,6 @@ export function LandingNav() {
       </Link>
       <nav className="lp-nav-links">
         <a href="#features">Features</a>
-        <Link href="/forecast">Full forecaster</Link>
         <Link href="/dashboard" className="lp-nav-cta">
           View dashboard
         </Link>

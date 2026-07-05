@@ -37,13 +37,14 @@ import { ScenarioPanel } from "@/components/ScenarioPanel";
 import { SeriesPanel } from "@/components/SeriesPanel";
 import { TrustStrip } from "@/components/TrustStrip";
 import { ErrorState } from "@/components/StateViews";
+import { formatGeneratedAt } from "@/lib/format";
 
 const DEFAULT_PARAMS: DemoParams = {
   weeks: 104,
   seed: 42,
-  starting_mrr: 80000,
-  opening_balance: 250000,
-  currency: "USD",
+  starting_mrr: 6_600_000,
+  opening_balance: 20_000_000,
+  currency: "INR",
   thresholds: { min_balance: null, min_runway_weeks: null },
 };
 
@@ -56,7 +57,7 @@ const DEFAULT_SCENARIO: ScenarioInput = {
   one_off_week: 4,
 };
 
-const FX_CYCLE = ["USD", "INR"];
+const FX_CYCLE = ["INR", "USD"];
 
 type Status = "loading" | "ready" | "error";
 
@@ -226,7 +227,7 @@ export default function Page() {
                   {fxTo ? `≈ ${fxTo}` : "FX ≈"}
                 </button>
               </div>
-              <div>generated {new Date(data.generated_at).toISOString().slice(0, 16).replace("T", " ")}Z</div>
+              <div>generated {formatGeneratedAt(data.generated_at)}</div>
               <div>horizon {data.horizon_weeks}w · {data.currency}</div>
             </div>
           )}

@@ -234,7 +234,7 @@ function buildKpis(data: ForecastResponse): BizKpi[] {
 }
 
 function fmtInt(value: number, currency: string): string {
-  const code = (currency || "USD").split("/")[0].toUpperCase();
+  const code = (currency || "INR").split("/")[0].toUpperCase();
   const locale = code === "INR" ? "en-IN" : "en-US";
   return new Intl.NumberFormat(locale, {
     style: "currency",

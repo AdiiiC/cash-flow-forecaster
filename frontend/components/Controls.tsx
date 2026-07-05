@@ -23,7 +23,7 @@ const CURRENCY_PRESETS: Record<
   INR: { starting_mrr: 6_600_000, opening_balance: 20_000_000, mrrStep: 500_000, balStep: 1_000_000 },
 };
 
-const CURRENCIES = ["USD", "INR"] as const;
+const CURRENCIES = ["INR", "USD"] as const;
 
 export function Controls({ params, onParamsChange, onRunDemo, onUpload, loading }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -33,7 +33,7 @@ export function Controls({ params, onParamsChange, onRunDemo, onUpload, loading 
     onParamsChange({ ...params, [key]: v });
   };
 
-  const preset = CURRENCY_PRESETS[params.currency] ?? CURRENCY_PRESETS.USD;
+  const preset = CURRENCY_PRESETS[params.currency] ?? CURRENCY_PRESETS.INR;
 
   const setThreshold = (key: "min_balance" | "min_runway_weeks") => (v: number) => {
     // 0 (or below) disables that threshold.
@@ -43,7 +43,7 @@ export function Controls({ params, onParamsChange, onRunDemo, onUpload, loading 
 
   const setCurrency = (currency: string) => {
     // Switching currency reloads that currency's default scenario amounts.
-    const p = CURRENCY_PRESETS[currency] ?? CURRENCY_PRESETS.USD;
+    const p = CURRENCY_PRESETS[currency] ?? CURRENCY_PRESETS.INR;
     onParamsChange({
       ...params,
       currency,

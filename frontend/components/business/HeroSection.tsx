@@ -17,9 +17,6 @@ export function HeroSection() {
           <Link href="/dashboard" className="lp-btn lp-btn-primary">
             View dashboard
           </Link>
-          <Link href="/forecast" className="lp-btn lp-btn-secondary">
-            Explore the full forecaster
-          </Link>
         </div>
         <p className="lp-hero-note">
           Live sample data, ready to explore. No sign-up required.

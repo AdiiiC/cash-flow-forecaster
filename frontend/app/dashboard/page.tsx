@@ -20,9 +20,9 @@ import { KeyTakeaways } from "@/components/business/KeyTakeaways";
 const DASHBOARD_PARAMS: DemoParams = {
   weeks: 104,
   seed: 42,
-  starting_mrr: 80000,
-  opening_balance: 250000,
-  currency: "USD",
+  starting_mrr: 6_600_000,
+  opening_balance: 20_000_000,
+  currency: "INR",
   thresholds: { min_balance: null, min_runway_weeks: null },
 };
 
@@ -73,7 +73,6 @@ export default function DashboardPage() {
           )}
         </div>
         <nav className="bz-header-nav">
-          <Link href="/forecast">Full forecaster →</Link>
           <AuthMenu onAuthChange={() => undefined} />
         </nav>
       </header>
@@ -86,9 +85,6 @@ export default function DashboardPage() {
         {status === "error" && (
           <div className="bz-state bz-state-error">
             <p>{error}</p>
-            <Link href="/forecast" className="lp-btn lp-btn-secondary">
-              Open the full forecaster
-            </Link>
           </div>
         )}
 

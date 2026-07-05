@@ -6,6 +6,7 @@
 **/.env
 !**/.env.example
 !**/.env.local.example
+*.local.md
 
 # ---- Python / backend ----
 __pycache__/

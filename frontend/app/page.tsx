@@ -20,13 +20,10 @@ export default function LandingPage() {
         <FeaturesSection />
         <section className="lp-cta">
           <h2>See your cash story in one screen</h2>
-          <p>Open the executive dashboard, or dive into the full technical forecaster.</p>
+          <p>Open the executive dashboard for a clear, forward-looking picture of your cash.</p>
           <div className="lp-cta-actions">
             <Link href="/dashboard" className="lp-btn lp-btn-primary">
               View dashboard
-            </Link>
-            <Link href="/forecast" className="lp-btn lp-btn-secondary">
-              Full forecaster
             </Link>
           </div>
         </section>
