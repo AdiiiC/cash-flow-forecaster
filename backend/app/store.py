@@ -90,6 +90,21 @@ _audit_log = Table(
     Column("created_at", String(40), nullable=False),
 )
 
+_recurring = Table(
+    "recurring_items",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("name", String(120), nullable=False),
+    Column("amount", Float, nullable=False),
+    Column("direction", String(16), nullable=False),  # inflow | outflow
+    Column("cadence", String(16), nullable=False),  # weekly | biweekly | monthly | quarterly
+    Column("anchor_date", String(20), nullable=False),  # ISO date of next/first occurrence
+    Column("category", String(60), nullable=True),
+    Column("active", Integer, nullable=False, default=1),
+    Column("created_at", String(40), nullable=False),
+)
+
 
 def _resolve_url() -> str:
     """Pick the connection URL and normalise it for the psycopg 3 driver."""
@@ -360,5 +375,78 @@ def list_audit(user_id: str, limit: int = 100) -> list[dict]:
     with _engine().connect() as conn:
         rows = conn.execute(stmt).mappings().all()
     return [dict(r) for r in rows]
+
+
+# ---- Recurring scheduled items ------------------------------------------------
+
+
+def _recurring_to_dict(row) -> dict:
+    d = dict(row)
+    d["active"] = bool(d["active"])
+    return d
+
+
+def save_recurring(
+    user_id: str,
+    *,
+    name: str,
+    amount: float,
+    direction: str,
+    cadence: str,
+    anchor_date: str,
+    category: str | None,
+    active: bool = True,
+) -> dict:
+    _ensure()
+    item_id = uuid.uuid4().hex[:12]
+    created_at = datetime.utcnow().isoformat()
+    with _engine().begin() as conn:
+        conn.execute(
+            insert(_recurring).values(
+                id=item_id,
+                user_id=user_id,
+                name=name,
+                amount=amount,
+                direction=direction,
+                cadence=cadence,
+                anchor_date=anchor_date,
+                category=category,
+                active=1 if active else 0,
+                created_at=created_at,
+            )
+        )
+    return get_recurring(item_id, user_id)
+
+
+def get_recurring(item_id: str, user_id: str) -> dict | None:
+    _ensure()
+    stmt = select(_recurring).where(
+        _recurring.c.id == item_id, _recurring.c.user_id == user_id
+    )
+    with _engine().connect() as conn:
+        row = conn.execute(stmt).mappings().first()
+    return _recurring_to_dict(row) if row else None
+
+
+def list_recurring(user_id: str, *, active_only: bool = False) -> list[dict]:
+    _ensure()
+    stmt = select(_recurring).where(_recurring.c.user_id == user_id)
+    if active_only:
+        stmt = stmt.where(_recurring.c.active == 1)
+    stmt = stmt.order_by(_recurring.c.anchor_date.asc())
+    with _engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [_recurring_to_dict(r) for r in rows]
+
+
+def delete_recurring(item_id: str, user_id: str) -> bool:
+    _ensure()
+    with _engine().begin() as conn:
+        result = conn.execute(
+            delete(_recurring).where(
+                _recurring.c.id == item_id, _recurring.c.user_id == user_id
+            )
+        )
+    return bool(result.rowcount)
 
 

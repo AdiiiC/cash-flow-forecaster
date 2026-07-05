@@ -29,6 +29,7 @@ import { ExportBar } from "@/components/ExportBar";
 import { KpiCards } from "@/components/KpiCards";
 import { NarrativePanel } from "@/components/NarrativePanel";
 import { ProgressBar } from "@/components/ProgressBar";
+import { RecurringPanel } from "@/components/RecurringPanel";
 import { RunHistory } from "@/components/RunHistory";
 import { RunwayHero } from "@/components/RunwayHero";
 import { ScenarioPanel } from "@/components/ScenarioPanel";
@@ -145,6 +146,20 @@ export default function Page() {
       /* keep current */
     }
   }, [params]);
+
+  // Re-run the demo forecast so newly added/removed recurring items are folded
+  // into runway and balance. Preserves an applied scenario overlay if present.
+  const reforecastRecurring = useCallback(async () => {
+    try {
+      const result = await fetchDemoForecast({
+        ...params,
+        scenario: data?.scenario ? scenarioInput : null,
+      });
+      setData(result);
+    } catch {
+      /* keep current view on failure */
+    }
+  }, [params, data?.scenario, scenarioInput]);
 
   const selectRun = useCallback(async (id: string) => {
     setStatus("loading");
@@ -269,6 +284,8 @@ export default function Page() {
               data={data}
               loading={false}
             />
+
+            <RecurringPanel data={data} onChanged={reforecastRecurring} />
 
             <div className="two-col">
               <CategoryWaterfall

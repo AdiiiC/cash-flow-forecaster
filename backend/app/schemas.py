@@ -26,6 +26,13 @@ class EntryStatus(str, Enum):
     outstanding = "outstanding"
 
 
+class Cadence(str, Enum):
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+    quarterly = "quarterly"
+
+
 class LedgerEntry(BaseModel):
     """A single point-in-time cash event."""
 
@@ -174,6 +181,48 @@ class ScenarioResult(BaseModel):
     delta_net_total: float
 
 
+class RecurringItemInput(BaseModel):
+    """A known, repeating cash event the user schedules (payroll, rent, SaaS)."""
+
+    name: str = Field(..., min_length=1, max_length=120)
+    amount: float = Field(..., gt=0)
+    direction: Direction
+    cadence: Cadence
+    anchor_date: date  # the next (or first) occurrence date
+    category: str | None = Field(default=None, max_length=60)
+    active: bool = True
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("name must not be blank.")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def _strip_category(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None
+
+
+class RecurringItem(RecurringItemInput):
+    id: str
+    created_at: datetime
+
+
+class RecurringImpact(BaseModel):
+    """Summary of how scheduled items shifted the forecast (UI transparency)."""
+
+    count: int
+    inflow_total: float  # total scheduled inflows landing within the horizon
+    outflow_total: float  # total scheduled outflows within the horizon
+    net_total: float  # inflow_total - outflow_total
+
+
 class Thresholds(BaseModel):
     min_balance: float | None = None  # alert if projected balance dips below this
     min_runway_weeks: float | None = None  # alert if runway shorter than this
@@ -214,6 +263,7 @@ class ForecastResponse(BaseModel):
     alerts: list[Alert] = Field(default_factory=list)
     scenario: ScenarioResult | None = None
     insight: RunwayInsight | None = None
+    recurring: RecurringImpact | None = None  # scheduled items folded into the projection
 
 
 class RunSummary(BaseModel):

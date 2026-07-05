@@ -13,6 +13,7 @@ from typing import Callable
 
 from app import alerts as alerts_mod
 from app import cache, store
+from app import recurring as recurring_mod
 from app import scenario as scenario_mod
 from app.analytics.categories import analyze_categories
 from app.config import get_settings
@@ -25,6 +26,7 @@ from app.schemas import (
     ForecastResponse,
     IntervalCalibration,
     Ledger,
+    RecurringItem,
     ScenarioInput,
     SeriesForecast,
     Thresholds,
@@ -181,22 +183,36 @@ def finalize(
     thresholds: Thresholds | None,
     scenario: ScenarioInput | None,
     cached: bool,
+    recurring_items: list | None = None,
 ) -> ForecastResponse:
-    """Apply the cheap per-request layer: cache flag, alerts, scenario overlay."""
+    """Apply the cheap per-request layer: cache flag, recurring overlay, alerts, scenario."""
     result = base.model_copy(deep=True)
     result.cached = cached
+    if recurring_items:
+        recurring_mod.apply_recurring(result, recurring_items)
     result.alerts = alerts_mod.evaluate(result, thresholds)
     if scenario is not None:
         result.scenario = scenario_mod.apply_scenario(result, scenario)
     return result
 
 
+def _load_recurring_items(user_id: str | None) -> list[RecurringItem]:
+    """Fetch a user's active recurring items as validated models (empty if anon)."""
+    if not user_id:
+        return []
+    try:
+        rows = store.list_recurring(user_id, active_only=True)
+        return [RecurringItem.model_validate(r) for r in rows]
+    except Exception as exc:  # noqa: BLE001 - overlay must never break a forecast
+        logger.warning("Failed to load recurring items: %s", exc, exc_info=True)
+        return []
+
+
 def build_forecast(
     ledger: Ledger,
     horizon: int | None = None,
     *,
-    source: str = "demo",
-    label: str = "",
+    source: str = "demo",    label: str = "",
     thresholds: Thresholds | None = None,
     scenario: ScenarioInput | None = None,
     use_cache: bool = True,
@@ -213,7 +229,8 @@ def build_forecast(
     else:
         base, cached = build_base_forecast(ledger, h, progress), False
 
-    result = finalize(base, thresholds, scenario, cached)
+    recurring_items = _load_recurring_items(user_id)
+    result = finalize(base, thresholds, scenario, cached, recurring_items)
 
     if persist:
         run_label = label or f"{source} · {ledger.currency} · {h}w"

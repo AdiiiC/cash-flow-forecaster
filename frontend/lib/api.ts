@@ -127,6 +127,7 @@ export interface ForecastResponse {
   alerts: Alert[];
   scenario: ScenarioResult | null;
   insight: RunwayInsight | null;
+  recurring: RecurringImpact | null;
 }
 
 export interface RunSummary {
@@ -462,4 +463,72 @@ export async function deleteScenario(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok) throw new ApiError(`Could not delete scenario (${res.status})`);
+}
+
+// ---- Recurring scheduled items ----------------------------------------------
+
+export type Cadence = "weekly" | "biweekly" | "monthly" | "quarterly";
+
+export interface RecurringImpact {
+  count: number;
+  inflow_total: number;
+  outflow_total: number;
+  net_total: number;
+}
+
+export interface RecurringItem {
+  id: string;
+  name: string;
+  amount: number;
+  direction: Direction;
+  cadence: Cadence;
+  anchor_date: string;
+  category: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface RecurringItemInput {
+  name: string;
+  amount: number;
+  direction: Direction;
+  cadence: Cadence;
+  anchor_date: string;
+  category?: string | null;
+  active?: boolean;
+}
+
+export async function listRecurring(): Promise<RecurringItem[]> {
+  if (!getToken()) return [];
+  const res = await fetch(`${API_BASE}/api/recurring`, { headers: authHeaders() });
+  if (res.status === 401) return [];
+  if (!res.ok) throw new ApiError(`Could not load recurring items (${res.status})`);
+  return (await res.json()) as RecurringItem[];
+}
+
+export async function createRecurring(item: RecurringItemInput): Promise<RecurringItem> {
+  const res = await fetch(`${API_BASE}/api/recurring`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) {
+    let detail = `Could not save recurring item (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : detail;
+    } catch {
+      /* keep default */
+    }
+    throw new ApiError(detail);
+  }
+  return (await res.json()) as RecurringItem;
+}
+
+export async function deleteRecurring(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/recurring/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new ApiError(`Could not delete recurring item (${res.status})`);
 }
