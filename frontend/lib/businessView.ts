@@ -14,7 +14,11 @@ export type BizIconName =
   | "wallet"
   | "runway"
   | "revenue"
-  | "netflow";
+  | "netflow"
+  | "burn"
+  | "arr"
+  | "downside"
+  | "trough";
 
 export interface BizKpi {
   id: string;
@@ -184,6 +188,32 @@ function buildKpis(data: ForecastResponse): BizKpi[] {
   // Net cash flow over the horizon (money in minus money out).
   const netTotal = net ? net.forecast.reduce((a, p) => a + p.p50, 0) : 0;
 
+  // Horizon in months, for per-month rates.
+  const months = data.horizon_weeks / 4.33;
+
+  // Average monthly net cash flow (negative = burning cash).
+  const avgMonthlyNet = months > 0 ? netTotal / months : 0;
+
+  // Projected annual recurring revenue: ending MRR annualised.
+  const arr = mrrLast * 12;
+
+  // Walk the cumulative p50 balance path to find the tightest cash moment
+  // (trough), and accumulate the p10 path for the worst-case ending balance.
+  let running = data.opening_balance;
+  let troughBalance = data.opening_balance;
+  let troughPeriod = data.as_of;
+  let downsideEnd = data.opening_balance;
+  if (net) {
+    for (const pt of net.forecast) {
+      running += pt.p50;
+      if (running < troughBalance) {
+        troughBalance = running;
+        troughPeriod = pt.period;
+      }
+      downsideEnd += pt.p10;
+    }
+  }
+
   return [
     {
       id: "cash-on-hand",
@@ -229,6 +259,50 @@ function buildKpis(data: ForecastResponse): BizKpi[] {
       comparisonLabel: `over ${data.horizon_weeks} weeks`,
       icon: "netflow",
       hint: "Money in minus money out. Positive means you're building cash.",
+    },
+    {
+      id: "burn-rate",
+      label: "Net burn rate",
+      value: `${avgMonthlyNet >= 0 ? "+" : ""}${fmtInt(avgMonthlyNet, data.currency)}/mo`,
+      changePct: null,
+      trend: avgMonthlyNet >= 0 ? "up" : "down",
+      polarity: "higher-is-better",
+      comparisonLabel: avgMonthlyNet >= 0 ? "building cash each month" : "burning cash each month",
+      icon: "burn",
+      hint: "Average monthly change in cash. Negative means you're spending down reserves.",
+    },
+    {
+      id: "arr",
+      label: "Projected ARR",
+      value: fmtInt(arr, data.currency),
+      changePct: mrrChange,
+      trend: trendOf(mrrChange),
+      polarity: "higher-is-better",
+      comparisonLabel: "recurring revenue × 12",
+      icon: "arr",
+      hint: "Annual recurring revenue — your ending monthly recurring revenue, annualised.",
+    },
+    {
+      id: "downside-cash",
+      label: "Downside cash on hand",
+      value: fmtInt(downsideEnd, data.currency),
+      changePct: null,
+      trend: downsideEnd >= data.opening_balance ? "up" : "down",
+      polarity: "higher-is-better",
+      comparisonLabel: `worst-case (p10) vs ${fmtInt(data.projected_balance_p50, data.currency)} expected`,
+      icon: "downside",
+      hint: "The cautious end of the range: where cash lands if things go poorly.",
+    },
+    {
+      id: "cash-trough",
+      label: "Lowest projected cash",
+      value: fmtInt(troughBalance, data.currency),
+      changePct: null,
+      trend: troughBalance >= data.opening_balance ? "up" : "down",
+      polarity: "higher-is-better",
+      comparisonLabel: `tightest around ${monthKey(troughPeriod)}`,
+      icon: "trough",
+      hint: "Your lowest expected balance across the window — the moment to plan for.",
     },
   ];
 }

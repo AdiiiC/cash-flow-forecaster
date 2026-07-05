@@ -34,6 +34,33 @@ const paths: Record<string, JSX.Element> = {
       <path d="M10 14l-3 3 3 3" />
     </>
   ),
+  burn: (
+    <>
+      <path d="M12 3s4 3.5 4 8a4 4 0 0 1-8 0c0-1.6.8-2.7.8-2.7S9 10 10 11c1-2 0-5 2-8Z" />
+    </>
+  ),
+  arr: (
+    <>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M4 9h16" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+      <path d="M8.5 16.5l2.5-3 2 1.5 2.5-3" />
+    </>
+  ),
+  downside: (
+    <>
+      <path d="M12 4v10" />
+      <path d="M8 12l4 4 4-4" />
+      <path d="M5 20h14" />
+    </>
+  ),
+  trough: (
+    <>
+      <path d="M4 5v14h16" />
+      <path d="M7 9l3 6 4-5 3 3" />
+    </>
+  ),
   clarity: (
     <>
       <circle cx="11" cy="11" r="7" />
