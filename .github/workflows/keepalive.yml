@@ -1,0 +1,34 @@
+name: Keep backend warm
+
+# Render's free tier spins the service down after ~15 min idle, so the first
+# request after a quiet period pays a 30-60s cold start. This pings the health
+# endpoint on a schedule to keep the container awake, so the Vercel dashboard
+# loads promptly for real visitors.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 minutes
+  workflow_dispatch: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        env:
+          # Public backend URL; override via repo variable BACKEND_URL if it changes.
+          BACKEND_URL: ${{ vars.BACKEND_URL || 'https://cash-flow-forecaster.onrender.com' }}
+        run: |
+          for i in 1 2 3 4; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$BACKEND_URL/api/health" || true)
+            echo "attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "Backend did not return 200 (it may still be waking up)."
+          # Do not fail the workflow — a missed ping should not create noise.
+          exit 0

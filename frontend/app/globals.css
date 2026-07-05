@@ -2060,6 +2060,12 @@ button:disabled {
   text-align: center;
   color: var(--text-muted);
 }
+.bz-state-hint {
+  margin: 12px auto 0;
+  max-width: 34ch;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
 .bz-state-error {
   display: flex;
   flex-direction: column;

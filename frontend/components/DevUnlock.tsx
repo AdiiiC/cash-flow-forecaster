@@ -11,7 +11,9 @@ import { useEffect } from "react";
 export function DevUnlock() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "d") {
+      // Use e.code (physical key) rather than e.key: on macOS, holding Option
+      // rewrites e.key (Option+D -> "∂"), which would break the shortcut.
+      if (e.ctrlKey && e.altKey && e.code === "KeyD") {
         e.preventDefault();
         const key = window.prompt("Dev access key");
         if (key) {

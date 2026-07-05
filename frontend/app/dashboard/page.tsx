@@ -32,10 +32,17 @@ export default function DashboardPage() {
   const [data, setData] = useState<ForecastResponse | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string>("");
+  const [slowHint, setSlowHint] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
+    setSlowHint(false);
+    // If the first response is slow (e.g. the backend is waking from idle),
+    // reassure the visitor instead of showing a silent spinner.
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setSlowHint(true);
+    }, 4000);
     fetchDemoForecast(DASHBOARD_PARAMS)
       .then((res) => {
         if (cancelled) return;
@@ -53,6 +60,7 @@ export default function DashboardPage() {
       });
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
     };
   }, []);
 
@@ -79,7 +87,15 @@ export default function DashboardPage() {
 
       <main className="bz-main">
         {status === "loading" && (
-          <div className="bz-state">Loading your cash-flow snapshot…</div>
+          <div className="bz-state">
+            Loading your cash-flow snapshot…
+            {slowHint && (
+              <p className="bz-state-hint">
+                Waking the server — the first load after a quiet spell can take up
+                to a minute. Thanks for your patience.
+              </p>
+            )}
+          </div>
         )}
 
         {status === "error" && (
