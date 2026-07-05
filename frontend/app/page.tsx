@@ -297,6 +297,12 @@ export default function Page() {
           </div>
         </div>
       )}
+
+      <footer className="site-footer">
+        <span>Cash-Flow Forecaster</span>
+        <span className="dot-sep">·</span>
+        <a href="/privacy">Data &amp; security</a>
+      </footer>
     </main>
   );
 }

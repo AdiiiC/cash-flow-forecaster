@@ -79,6 +79,17 @@ _scenarios = Table(
     Column("created_at", String(40), nullable=False),
 )
 
+_audit_log = Table(
+    "audit_log",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=True),  # null for anonymous/system events
+    Column("action", String(64), nullable=False),  # e.g. "auth.login", "scenario.create"
+    Column("entity", String(120), nullable=True),  # optional target id/label
+    Column("meta", Text, nullable=True),  # optional JSON details
+    Column("created_at", String(40), nullable=False),
+)
+
 
 def _resolve_url() -> str:
     """Pick the connection URL and normalise it for the psycopg 3 driver."""
@@ -303,4 +314,51 @@ def delete_scenario(scenario_id: str, user_id: str) -> bool:
             )
         )
     return bool(result.rowcount)
+
+
+# ---- Audit log ----------------------------------------------------------------
+
+
+def record_audit(
+    action: str,
+    user_id: str | None = None,
+    entity: str | None = None,
+    meta: dict | None = None,
+) -> None:
+    """Append an audit event. Never raises — auditing must not break a request."""
+    try:
+        _ensure()
+        with _engine().begin() as conn:
+            conn.execute(
+                insert(_audit_log).values(
+                    id=uuid.uuid4().hex[:12],
+                    user_id=user_id,
+                    action=action,
+                    entity=entity,
+                    meta=json.dumps(meta) if meta is not None else None,
+                    created_at=datetime.utcnow().isoformat(),
+                )
+            )
+    except Exception:  # noqa: BLE001 - auditing is best-effort
+        pass
+
+
+def list_audit(user_id: str, limit: int = 100) -> list[dict]:
+    _ensure()
+    stmt = (
+        select(
+            _audit_log.c.id,
+            _audit_log.c.action,
+            _audit_log.c.entity,
+            _audit_log.c.meta,
+            _audit_log.c.created_at,
+        )
+        .where(_audit_log.c.user_id == user_id)
+        .order_by(_audit_log.c.created_at.desc())
+        .limit(limit)
+    )
+    with _engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [dict(r) for r in rows]
+
 

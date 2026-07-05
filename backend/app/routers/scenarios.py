@@ -33,6 +33,7 @@ def create_scenario(
     body: ScenarioCreate, user: dict = Depends(get_current_user)
 ) -> SavedScenario:
     row = store.save_scenario(user["id"], body.name, body.scenario.model_dump_json())
+    store.record_audit("scenario.create", user_id=user["id"], entity=row["id"])
     return _to_public(row)
 
 
@@ -40,4 +41,5 @@ def create_scenario(
 def delete_scenario(scenario_id: str, user: dict = Depends(get_current_user)) -> dict:
     if not store.delete_scenario(scenario_id, user["id"]):
         raise HTTPException(status_code=404, detail="Scenario not found.")
+    store.record_audit("scenario.delete", user_id=user["id"], entity=scenario_id)
     return {"deleted": scenario_id}

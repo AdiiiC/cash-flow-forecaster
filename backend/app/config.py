@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     # are posted to the configured channel. Empty disables Slack notifications.
     slack_webhook_url: str = ""
 
+    # ---- Data protection ---------------------------------------------------
+    # Fernet key (urlsafe base64, 32 bytes) used to encrypt sensitive text
+    # fields at rest (e.g. invoice customer / bill vendor names). When empty,
+    # values are stored as-is (dev only). Generate with:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    data_encryption_key: str = ""
+
     # Persistence. When set (e.g. a Supabase/Neon Postgres URL) run history is
     # stored there and survives redeploys. When empty, we fall back to a local
     # SQLite file so local dev and tests need no external database.

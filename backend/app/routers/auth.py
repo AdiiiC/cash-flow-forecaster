@@ -37,6 +37,7 @@ def register(body: UserCreate) -> TokenResponse:
         # Race: another request created the same email between the check and insert.
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
     token = create_access_token(user["id"])
+    store.record_audit("auth.register", user_id=user["id"])
     return TokenResponse(access_token=token, user=_to_public(user))
 
 
@@ -47,9 +48,16 @@ def login(body: UserLogin) -> TokenResponse:
         # Same message for both cases so we don't reveal which emails exist.
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
     token = create_access_token(user["id"])
+    store.record_audit("auth.login", user_id=user["id"])
     return TokenResponse(access_token=token, user=_to_public(user))
 
 
 @router.get("/me", response_model=UserPublic)
 def me(user: dict = Depends(get_current_user)) -> UserPublic:
     return _to_public(user)
+
+
+@router.get("/me/audit")
+def my_audit(user: dict = Depends(get_current_user)) -> list[dict]:
+    """Return the signed-in user's own recent account activity (transparency)."""
+    return store.list_audit(user["id"], limit=100)
