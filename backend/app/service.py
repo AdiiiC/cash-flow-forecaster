@@ -7,9 +7,12 @@ overlay) is applied on top every call so those toggles feel instant.
 from __future__ import annotations
 
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Callable
+
+from threadpoolctl import threadpool_limits
 
 from app import alerts as alerts_mod
 from app import cache, store
@@ -77,22 +80,36 @@ def build_base_forecast(
     series_map = weekly_series(ledger)
 
     def _run(name: str) -> SeriesForecast:
-        return run_series_forecast(
-            series=series_map[name],
-            name=name,
-            label=SERIES_LABELS[name],
-            horizon=horizon,
-            n_origins=settings.backtest_origins,
-            unit=ledger.currency if name != "mrr" else f"{ledger.currency}/mo",
-        )
+        # Pin native BLAS/OpenMP pools to a single thread *inside the worker*.
+        # sklearn's HistGradientBoosting otherwise spawns one OpenMP thread per
+        # core in each of the 4 worker threads; on the tiny per-origin fits that
+        # spawn overhead dominates and oversubscribes the CPU, making the
+        # backtest an order of magnitude slower (~100s vs ~2s). OpenMP's thread
+        # count is a per-thread control variable, so the limit must be set here
+        # in the worker, not around the executor in the parent thread.
+        with threadpool_limits(limits=1):
+            return run_series_forecast(
+                series=series_map[name],
+                name=name,
+                label=SERIES_LABELS[name],
+                horizon=horizon,
+                n_origins=settings.backtest_origins,
+                unit=ledger.currency if name != "mrr" else f"{ledger.currency}/mo",
+            )
 
     # The four series are independent backtests; run them in parallel. The heavy
-    # numeric work (numpy/sklearn) releases the GIL, so threads give a real ~4x
-    # speedup without the overhead or pickling cost of processes.
+    # numeric work (numpy/sklearn) releases the GIL, so threads give a real speedup
+    # without the overhead or pickling cost of processes. Worker count adapts to
+    # the host: never spawn more threads than there are series *or* CPU cores, so
+    # a small/shared container (e.g. a 1-core free tier) degrades gracefully to
+    # sequential instead of oversubscribing. (Each worker is separately pinned to
+    # a single native thread above, which is optimal for the tiny per-origin fits
+    # on any hardware.)
+    max_workers = max(1, min(len(_ORDER), os.cpu_count() or 1))
     results: dict[str, SeriesForecast] = {}
     if progress:
         progress(0.1, "Backtesting cash-flow series")
-    with ThreadPoolExecutor(max_workers=len(_ORDER)) as pool:
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(_run, name): name for name in _ORDER}
         done = 0
         for future in as_completed(futures):

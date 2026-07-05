@@ -95,7 +95,7 @@ def run_series_forecast(
     if y.size < 8:
         return _short_series_forecast(y, index, name, label, horizon, unit)
 
-    models = baselines.default_models(season=1)
+    models = baselines.default_models(season=1, n_obs=y.size)
     scale = metrics.naive_scale(y, season=1)
 
     # Score every candidate by out-of-sample MASE.

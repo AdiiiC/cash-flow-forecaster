@@ -76,7 +76,7 @@ h3 {
 .app {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 28px 24px 80px;
+  padding: 28px clamp(14px, 4vw, 24px) 80px;
 }
 
 /* ---- Header ---- */
@@ -541,7 +541,7 @@ button:disabled {
 }
 .lb-row {
   display: grid;
-  grid-template-columns: 90px 1fr 60px;
+  grid-template-columns: 132px 1fr 60px;
   align-items: center;
   gap: 10px;
   font-size: 12px;
@@ -557,6 +557,7 @@ button:disabled {
 .lb-name {
   color: var(--text-muted);
   font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 /* Narrative */
@@ -1044,6 +1045,27 @@ button:disabled {
   }
 }
 
+/* The history sidebar (260px) squeezes the content column; collapse the whole
+   two-column layout before the KPI row gets too narrow to hold 4 cards. Below
+   this width the history moves under the forecast (see order rules) so mobile
+   users reach the results first. */
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .history {
+    position: static;
+    order: 2;
+    top: auto;
+  }
+  .content {
+    order: 1;
+  }
+  .run-list {
+    max-height: none;
+  }
+}
+
 @media (max-width: 860px) {
   .kpis {
     grid-template-columns: repeat(2, 1fr);
@@ -1051,14 +1073,42 @@ button:disabled {
   .series-grid {
     grid-template-columns: 1fr;
   }
-  .layout {
-    grid-template-columns: 1fr;
-  }
   .two-col {
     grid-template-columns: 1fr;
   }
   .trust-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Stack the masthead on narrow screens so the title and the right-hand meta
+   stop fighting for horizontal space. */
+@media (max-width: 720px) {
+  .masthead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  /* Higher specificity so this wins over the base `.masthead-right` rule that
+     appears later in the file (media queries add no specificity of their own). */
+  .masthead .masthead-right {
+    align-items: flex-start;
+  }
+  .masthead .meta {
+    text-align: left;
+  }
+  .meta-badges {
+    justify-content: flex-start;
+  }
+}
+
+/* Single-column KPIs on small phones. */
+@media (max-width: 520px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+  .controls {
+    padding: 14px 12px;
   }
 }
 
@@ -1651,5 +1701,562 @@ button:disabled {
   .invoice-item .invoice-paid-btn,
   .invoice-item .invoice-paid-spacer {
     display: none;
+  }
+}
+
+/* ============================================================================
+   Business landing page (lp-*) — the front door at "/"
+   Same "Ledger" palette, but roomier and marketing-forward.
+   ============================================================================ */
+.lp {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 48px) 40px;
+  overflow-x: hidden;
+}
+.lp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+.lp-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--ink-900);
+}
+.lp-brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.lp-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 14px;
+}
+.lp-nav-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.lp-nav-links a:hover {
+  color: var(--text);
+}
+.lp-nav-cta {
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--ink-900) !important;
+  font-weight: 600;
+}
+.lp-nav-cta:hover {
+  filter: brightness(1.05);
+}
+
+/* Hero */
+.lp-hero {
+  position: relative;
+  padding: 90px 0 70px;
+  text-align: center;
+  overflow: hidden;
+}
+.lp-hero::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  height: 320px;
+  background: radial-gradient(closest-side, rgba(224, 163, 74, 0.16), transparent);
+  pointer-events: none;
+}
+.lp-hero-inner {
+  position: relative;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.lp-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid rgba(224, 163, 74, 0.35);
+  border-radius: 999px;
+  padding: 5px 12px;
+  margin-bottom: 22px;
+}
+.lp-hero-title {
+  font-size: 52px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+}
+.lp-accent {
+  color: var(--accent);
+}
+.lp-hero-sub {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0 auto 32px;
+  max-width: 620px;
+}
+.lp-hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.lp-hero-note {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+/* Buttons */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: filter 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.lp-btn-primary {
+  background: var(--accent);
+  color: var(--ink-900);
+}
+.lp-btn-primary:hover {
+  filter: brightness(1.06);
+}
+.lp-btn-secondary {
+  background: var(--ink-700);
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.lp-btn-secondary:hover {
+  border-color: var(--text-faint);
+}
+
+/* Features */
+.lp-features {
+  padding: 60px 0;
+}
+.lp-features-head {
+  text-align: center;
+  max-width: 620px;
+  margin: 0 auto 44px;
+}
+.lp-features-head h2 {
+  font-size: 30px;
+  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+}
+.lp-features-head p {
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.lp-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.lp-feature {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 26px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.lp-feature:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+}
+.lp-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(224, 163, 74, 0.12);
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+.lp-feature-title {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.lp-feature-desc {
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Landing CTA band */
+.lp-cta {
+  text-align: center;
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 48px 24px;
+  margin: 20px 0 40px;
+}
+.lp-cta h2 {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+.lp-cta p {
+  color: var(--text-muted);
+  margin: 0 auto 24px;
+}
+.lp-cta-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.lp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: 13px;
+}
+.lp-footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.lp-footer a:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 860px) {
+  .lp-features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .lp-nav {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .lp-nav-links {
+    gap: 14px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .lp-hero {
+    padding: 56px 0 44px;
+  }
+  .lp-hero-title {
+    font-size: 32px;
+  }
+  .lp-hero-sub {
+    font-size: 16px;
+  }
+  .lp-hero-actions .lp-btn,
+  .lp-cta-actions .lp-btn {
+    flex: 1 1 auto;
+  }
+  .lp-features {
+    padding: 40px 0;
+  }
+  .lp-features-head h2 {
+    font-size: 24px;
+  }
+}
+
+/* ============================================================================
+   Business dashboard (bz-*) — executive view at "/dashboard"
+   ============================================================================ */
+.bz {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 48px) 40px;
+  overflow-x: hidden;
+}
+/* Recharts can leave a stale over-wide legend/container width on resize;
+   cap wrappers so a chart never forces page-level horizontal scroll. */
+.bz .recharts-responsive-container,
+.bz .recharts-wrapper,
+.bz .recharts-legend-wrapper {
+  max-width: 100% !important;
+}
+.bz-panel {
+  min-width: 0;
+}
+.bz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.bz-mark {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+}
+.bz-header-meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.bz-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.bz-header-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+.bz-header-nav a:hover {
+  color: var(--accent);
+}
+.bz-main {
+  min-height: 50vh;
+}
+.bz-title {
+  margin-bottom: 22px;
+}
+.bz-title h1 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+.bz-title p {
+  color: var(--text-muted);
+  margin: 0;
+}
+.bz-state {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+.bz-state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--neg);
+}
+
+/* KPI grid */
+.bz-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.bz-kpi {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+.bz-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bz-kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(224, 163, 74, 0.12);
+  color: var(--accent);
+}
+.bz-kpi-change {
+  font-size: 13px;
+  font-weight: 600;
+}
+.bz-kpi-label {
+  margin-top: 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+}
+.bz-kpi-value {
+  font-size: 26px;
+  margin-top: 6px;
+}
+.bz-kpi-comp {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.bz-kpi-hint {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Rows + panels */
+.bz-row {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.bz-row-wide {
+  grid-template-columns: 2fr 1fr;
+}
+.bz-row-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.bz-panel {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+.bz-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.bz-panel-head h2 {
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+.bz-panel-head p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.bz-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 184, 160, 0.4);
+  color: var(--pos);
+}
+
+/* Tooltip (shared by bz charts) */
+.bz-tooltip {
+  background: var(--ink-700);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.bz-tooltip-title {
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.bz-tooltip-muted {
+  color: var(--text-muted);
+}
+
+/* Key takeaways */
+.bz-takeaways-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.bz-takeaways-head h3 {
+  font-size: 15px;
+}
+.bz-takeaways-head p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+.bz-takeaways-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bz-takeaway {
+  display: flex;
+  gap: 10px;
+}
+.bz-takeaway-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  margin-top: 6px;
+  background: var(--text-faint);
+}
+.bz-takeaway-dot.positive {
+  background: var(--pos);
+}
+.bz-takeaway-dot.watch {
+  background: var(--accent);
+}
+.bz-takeaway-dot.neutral {
+  background: var(--text-faint);
+}
+.bz-takeaway-text {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .bz-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bz-row-wide,
+  .bz-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .bz-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .bz-kpis {
+    grid-template-columns: 1fr;
+  }
+  .bz-title h1 {
+    font-size: 20px;
+  }
+  .bz-panel-head {
+    flex-direction: column;
+    gap: 8px;
   }
 }

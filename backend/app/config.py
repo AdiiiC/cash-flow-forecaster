@@ -72,7 +72,10 @@ class Settings(BaseSettings):
     # Forecasting defaults
     horizon_weeks: int = 13
     # Number of walk-forward origins used for backtesting / conformal residuals.
-    backtest_origins: int = 8
+    # More origins => more residual samples per horizon step, which stabilises
+    # the empirical coverage estimate and shrinks the finite-sample conformal
+    # inflation (both push measured coverage closer to the nominal target).
+    backtest_origins: int = 20
 
     @property
     def frontend_origins(self) -> list[str]:
