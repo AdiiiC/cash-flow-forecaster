@@ -16,6 +16,8 @@ from app.actuals import (
     FixedExpense,
     GSTConfig,
     GSTFrequency,
+    PaymentBufferType,
+    Supplier,
     VariableExpense,
 )
 from app.schemas import Direction, EntryStatus, LedgerEntry
@@ -26,11 +28,12 @@ def generate_sample_data(
 ) -> tuple[
     list[LedgerEntry],
     list[Customer],
+    list[Supplier],
     list[FixedExpense],
     list[VariableExpense],
     GSTConfig,
 ]:
-    """Return (entries, customers, fixed_expenses, variable_expenses, gst_config)."""
+    """Return (entries, customers, suppliers, fixed_expenses, variable_expenses, gst_config)."""
     rng = random.Random(seed)
     today = date.today()
 
@@ -42,6 +45,7 @@ def generate_sample_data(
             credit_period_days=30,
             credit_buffer_type=CreditBufferType.days,
             credit_buffer_value=7,
+            opening_balance=1_200_000,  # ₹12L outstanding AR
             category="enterprise",
             notes=None,
             active=True,
@@ -53,6 +57,7 @@ def generate_sample_data(
             credit_period_days=45,
             credit_buffer_type=CreditBufferType.days,
             credit_buffer_value=10,
+            opening_balance=2_500_000,  # ₹25L outstanding AR
             category="enterprise",
             notes=None,
             active=True,
@@ -64,6 +69,7 @@ def generate_sample_data(
             credit_period_days=15,
             credit_buffer_type=CreditBufferType.percent,
             credit_buffer_value=85,  # 85% collects on time
+            opening_balance=800_000,  # ₹8L outstanding AR
             category="sme",
             notes=None,
             active=True,
@@ -75,6 +81,7 @@ def generate_sample_data(
             credit_period_days=60,
             credit_buffer_type=CreditBufferType.days,
             credit_buffer_value=14,
+            opening_balance=3_000_000,  # ₹30L outstanding AR
             category="enterprise",
             notes=None,
             active=True,
@@ -86,6 +93,7 @@ def generate_sample_data(
             credit_period_days=30,
             credit_buffer_type=CreditBufferType.days,
             credit_buffer_value=5,
+            opening_balance=0,  # no outstanding
             category="enterprise",
             notes=None,
             active=True,
@@ -123,6 +131,59 @@ def generate_sample_data(
             status=EntryStatus.outstanding,
         ))
 
+    # ── Suppliers with varied payment terms ────────────────────────────────
+    suppliers = [
+        Supplier(
+            id="supp_001",
+            name="AWS India",
+            payment_terms_days=30,
+            payment_buffer_type=PaymentBufferType.days,
+            payment_buffer_value=0,
+            opening_balance=450_000,  # ₹4.5L outstanding AP
+            category="cloud_infra",
+            notes=None,
+            active=True,
+            created_at=datetime(2024, 1, 1),
+        ),
+        Supplier(
+            id="supp_002",
+            name="WeWork",
+            payment_terms_days=0,
+            payment_buffer_type=PaymentBufferType.days,
+            payment_buffer_value=0,
+            opening_balance=0,  # prepaid, no outstanding
+            category="office",
+            notes=None,
+            active=True,
+            created_at=datetime(2024, 2, 1),
+        ),
+        Supplier(
+            id="supp_003",
+            name="Razorpay",
+            payment_terms_days=15,
+            payment_buffer_type=PaymentBufferType.days,
+            payment_buffer_value=3,
+            opening_balance=180_000,  # ₹1.8L outstanding AP
+            category="payments",
+            notes=None,
+            active=True,
+            created_at=datetime(2024, 3, 1),
+        ),
+        Supplier(
+            id="supp_004",
+            name="Zoho",
+            payment_terms_days=30,
+            payment_buffer_type=PaymentBufferType.percent,
+            payment_buffer_value=95,  # 95% paid on time
+            opening_balance=120_000,  # ₹1.2L outstanding AP
+            category="software",
+            notes=None,
+            active=True,
+            created_at=datetime(2024, 4, 1),
+        ),
+    ]
+    supplier_names = [s.name for s in suppliers]
+
     # Historical purchases/bills
     for weeks_ago in range(8, 0, -1):
         d = today - timedelta(weeks=weeks_ago)
@@ -131,18 +192,18 @@ def generate_sample_data(
             amount=rng.randint(100_000, 600_000),
             direction=Direction.outflow,
             category=rng.choice(["cloud_infra", "marketing", "office", "travel"]),
-            customer_id=None,
+            customer_id=rng.choice(supplier_names),
             status=EntryStatus.paid,
         ))
 
     # Upcoming purchase commitments (outstanding payables)
     for i in range(3):
         entries.append(LedgerEntry(
-            date=today + timedelta(days=rng.randint(7, 30)),
+            date=today - timedelta(days=rng.randint(1, 14)),
             amount=rng.randint(200_000, 800_000),
             direction=Direction.outflow,
             category=rng.choice(["cloud_infra", "vendor_payment", "equipment"]),
-            customer_id=None,
+            customer_id=rng.choice(supplier_names),
             status=EntryStatus.outstanding,
         ))
 
@@ -228,4 +289,4 @@ def generate_sample_data(
         created_at=now,
     )
 
-    return entries, customers, fixed_expenses, variable_expenses, gst_config
+    return entries, customers, suppliers, fixed_expenses, variable_expenses, gst_config

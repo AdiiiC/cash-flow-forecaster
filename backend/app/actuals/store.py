@@ -16,6 +16,8 @@ from app.actuals import (
     FixedExpenseInput,
     GSTConfig,
     GSTConfigInput,
+    Supplier,
+    SupplierInput,
     VariableExpense,
     VariableExpenseInput,
 )
@@ -31,6 +33,23 @@ _customers = Table(
     Column("credit_period_days", Integer, nullable=False, default=30),
     Column("credit_buffer_type", String(16), nullable=False, default="days"),
     Column("credit_buffer_value", Float, nullable=False, default=7.0),
+    Column("opening_balance", Float, nullable=False, default=0.0),
+    Column("category", String(60), nullable=True),
+    Column("notes", String(500), nullable=True),
+    Column("active", Integer, nullable=False, default=1),
+    Column("created_at", String(40), nullable=False),
+)
+
+_suppliers = Table(
+    "suppliers",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("name", String(200), nullable=False),
+    Column("payment_terms_days", Integer, nullable=False, default=30),
+    Column("payment_buffer_type", String(16), nullable=False, default="days"),
+    Column("payment_buffer_value", Float, nullable=False, default=5.0),
+    Column("opening_balance", Float, nullable=False, default=0.0),
     Column("category", String(60), nullable=True),
     Column("notes", String(500), nullable=True),
     Column("active", Integer, nullable=False, default=1),
@@ -100,6 +119,7 @@ def create_customer(engine: Engine, user_id: str, inp: CustomerInput) -> Custome
         "credit_period_days": inp.credit_period_days,
         "credit_buffer_type": inp.credit_buffer_type.value,
         "credit_buffer_value": inp.credit_buffer_value,
+        "opening_balance": inp.opening_balance,
         "category": inp.category,
         "notes": inp.notes,
         "active": 1 if inp.active else 0,
@@ -126,6 +146,7 @@ def list_customers(engine: Engine, user_id: str) -> list[Customer]:
             credit_period_days=r["credit_period_days"],
             credit_buffer_type=r["credit_buffer_type"],
             credit_buffer_value=r["credit_buffer_value"],
+            opening_balance=r["opening_balance"],
             category=r["category"],
             notes=r["notes"],
             active=bool(r["active"]),
@@ -145,6 +166,7 @@ def update_customer(engine: Engine, user_id: str, customer_id: str, inp: Custome
                 credit_period_days=inp.credit_period_days,
                 credit_buffer_type=inp.credit_buffer_type.value,
                 credit_buffer_value=inp.credit_buffer_value,
+                opening_balance=inp.opening_balance,
                 category=inp.category,
                 notes=inp.notes,
                 active=1 if inp.active else 0,
@@ -160,6 +182,84 @@ def delete_customer(engine: Engine, user_id: str, customer_id: str) -> bool:
     with engine.begin() as conn:
         result = conn.execute(
             delete(_customers).where(_customers.c.id == customer_id, _customers.c.user_id == user_id)
+        )
+    return result.rowcount > 0
+
+
+# ─── Supplier CRUD ──────────────────────────────────────────────────────────
+
+
+def create_supplier(engine: Engine, user_id: str, inp: SupplierInput) -> Supplier:
+    row = {
+        "id": _uid(),
+        "user_id": user_id,
+        "name": inp.name,
+        "payment_terms_days": inp.payment_terms_days,
+        "payment_buffer_type": inp.payment_buffer_type.value,
+        "payment_buffer_value": inp.payment_buffer_value,
+        "opening_balance": inp.opening_balance,
+        "category": inp.category,
+        "notes": inp.notes,
+        "active": 1 if inp.active else 0,
+        "created_at": _now(),
+    }
+    with engine.begin() as conn:
+        conn.execute(insert(_suppliers).values(row))
+    return Supplier(
+        id=row["id"],
+        created_at=datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")),
+        **inp.model_dump(),
+    )
+
+
+def list_suppliers(engine: Engine, user_id: str) -> list[Supplier]:
+    with engine.begin() as conn:
+        rows = conn.execute(
+            select(_suppliers).where(_suppliers.c.user_id == user_id)
+        ).mappings().all()
+    return [
+        Supplier(
+            id=r["id"],
+            name=r["name"],
+            payment_terms_days=r["payment_terms_days"],
+            payment_buffer_type=r["payment_buffer_type"],
+            payment_buffer_value=r["payment_buffer_value"],
+            opening_balance=r["opening_balance"],
+            category=r["category"],
+            notes=r["notes"],
+            active=bool(r["active"]),
+            created_at=datetime.fromisoformat(r["created_at"].replace("Z", "+00:00")),
+        )
+        for r in rows
+    ]
+
+
+def update_supplier(engine: Engine, user_id: str, supplier_id: str, inp: SupplierInput) -> Supplier | None:
+    with engine.begin() as conn:
+        result = conn.execute(
+            update(_suppliers)
+            .where(_suppliers.c.id == supplier_id, _suppliers.c.user_id == user_id)
+            .values(
+                name=inp.name,
+                payment_terms_days=inp.payment_terms_days,
+                payment_buffer_type=inp.payment_buffer_type.value,
+                payment_buffer_value=inp.payment_buffer_value,
+                opening_balance=inp.opening_balance,
+                category=inp.category,
+                notes=inp.notes,
+                active=1 if inp.active else 0,
+            )
+        )
+        if result.rowcount == 0:
+            return None
+    suppliers = list_suppliers(engine, user_id)
+    return next((s for s in suppliers if s.id == supplier_id), None)
+
+
+def delete_supplier(engine: Engine, user_id: str, supplier_id: str) -> bool:
+    with engine.begin() as conn:
+        result = conn.execute(
+            delete(_suppliers).where(_suppliers.c.id == supplier_id, _suppliers.c.user_id == user_id)
         )
     return result.rowcount > 0
 

@@ -18,6 +18,8 @@ from app.actuals import (
     FixedExpenseInput,
     GSTConfig,
     GSTConfigInput,
+    Supplier,
+    SupplierInput,
     VariableExpense,
     VariableExpenseInput,
 )
@@ -25,17 +27,21 @@ from app.actuals.engine import build_deterministic_projection
 from app.actuals.store import (
     create_customer,
     create_fixed_expense,
+    create_supplier,
     create_variable_expense,
     delete_customer,
     delete_fixed_expense,
+    delete_supplier,
     delete_variable_expense,
     get_gst_config,
     init_actuals_tables,
     list_customers,
     list_fixed_expenses,
+    list_suppliers,
     list_variable_expenses,
     save_gst_config,
     update_customer,
+    update_supplier,
 )
 from app.auth import get_current_user, get_current_user_optional
 from app.data.ingest import IngestError, parse_csv
@@ -102,6 +108,53 @@ def delete_customer_route(
     engine = _get_engine()
     if not delete_customer(engine, u["id"], customer_id):
         raise HTTPException(status_code=404, detail="Customer not found.")
+
+
+# ─── Supplier Master ────────────────────────────────────────────────────────
+
+
+@router.post("/suppliers", response_model=Supplier, status_code=201)
+def create_supplier_route(
+    inp: SupplierInput,
+    user: dict | None = Depends(get_current_user_optional),
+):
+    u = _require_user(user)
+    engine = _get_engine()
+    return create_supplier(engine, u["id"], inp)
+
+
+@router.get("/suppliers", response_model=list[Supplier])
+def list_suppliers_route(
+    user: dict | None = Depends(get_current_user_optional),
+):
+    u = _require_user(user)
+    engine = _get_engine()
+    return list_suppliers(engine, u["id"])
+
+
+@router.put("/suppliers/{supplier_id}", response_model=Supplier)
+def update_supplier_route(
+    supplier_id: str,
+    inp: SupplierInput,
+    user: dict | None = Depends(get_current_user_optional),
+):
+    u = _require_user(user)
+    engine = _get_engine()
+    result = update_supplier(engine, u["id"], supplier_id, inp)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Supplier not found.")
+    return result
+
+
+@router.delete("/suppliers/{supplier_id}", status_code=204)
+def delete_supplier_route(
+    supplier_id: str,
+    user: dict | None = Depends(get_current_user_optional),
+):
+    u = _require_user(user)
+    engine = _get_engine()
+    if not delete_supplier(engine, u["id"], supplier_id):
+        raise HTTPException(status_code=404, detail="Supplier not found.")
 
 
 # ─── GST Config ─────────────────────────────────────────────────────────────
@@ -228,6 +281,7 @@ async def run_projection(
 
     # Load user's config
     customers = list_customers(engine, u["id"])
+    suppliers = list_suppliers(engine, u["id"])
     fixed = list_fixed_expenses(engine, u["id"])
     variable = list_variable_expenses(engine, u["id"])
     gst = get_gst_config(engine, u["id"])
@@ -235,6 +289,7 @@ async def run_projection(
     projection = build_deterministic_projection(
         entries=ledger.entries,
         customers=customers,
+        suppliers=suppliers,
         fixed_expenses=fixed,
         variable_expenses=variable,
         gst_config=gst,
@@ -260,11 +315,12 @@ def run_demo_projection(
     """
     from app.actuals.sample_data import generate_sample_data
 
-    entries, customers, fixed_expenses, variable_expenses, gst_config = generate_sample_data()
+    entries, customers, suppliers, fixed_expenses, variable_expenses, gst_config = generate_sample_data()
 
     projection = build_deterministic_projection(
         entries=entries,
         customers=customers,
+        suppliers=suppliers,
         fixed_expenses=fixed_expenses,
         variable_expenses=variable_expenses,
         gst_config=gst_config,

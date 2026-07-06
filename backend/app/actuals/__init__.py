@@ -30,6 +30,11 @@ class CustomerInput(BaseModel):
         ge=0,
         description="Buffer days (if type=days) or collection % (if type=percent, 0-100)",
     )
+    opening_balance: float = Field(
+        0.0,
+        ge=0,
+        description="How much this customer currently owes you (outstanding AR)",
+    )
     category: str | None = Field(default=None, max_length=60)
     notes: str | None = Field(default=None, max_length=500)
     active: bool = True
@@ -52,6 +57,56 @@ class CustomerInput(BaseModel):
 
 
 class Customer(CustomerInput):
+    id: str
+    created_at: datetime
+
+
+# ─── Supplier Master ────────────────────────────────────────────────────────
+
+
+class PaymentBufferType(str, Enum):
+    days = "days"  # shift payment date by N buffer days
+    percent = "percent"  # assume X% paid on time, rest slips later
+
+
+class SupplierInput(BaseModel):
+    """Create/update a supplier in the master."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    payment_terms_days: int = Field(30, ge=0, le=365, description="Net payment terms in days")
+    payment_buffer_type: PaymentBufferType = PaymentBufferType.days
+    payment_buffer_value: float = Field(
+        5.0,
+        ge=0,
+        description="Buffer days (if type=days) or on-time payment % (if type=percent, 0-100)",
+    )
+    opening_balance: float = Field(
+        0.0,
+        ge=0,
+        description="How much you currently owe this supplier (outstanding AP)",
+    )
+    category: str | None = Field(default=None, max_length=60)
+    notes: str | None = Field(default=None, max_length=500)
+    active: bool = True
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("name must not be blank.")
+        return v
+
+    @field_validator("payment_buffer_value")
+    @classmethod
+    def _validate_buffer(cls, v: float, info) -> float:
+        buf_type = info.data.get("payment_buffer_type")
+        if buf_type == PaymentBufferType.percent and (v < 0 or v > 100):
+            raise ValueError("percent buffer must be between 0 and 100.")
+        return v
+
+
+class Supplier(SupplierInput):
     id: str
     created_at: datetime
 

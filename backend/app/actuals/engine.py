@@ -16,7 +16,9 @@ from app.actuals import (
     DeterministicProjection,
     FixedExpense,
     GSTConfig,
+    PaymentBufferType,
     ProjectionPeriod,
+    Supplier,
     VariableExpense,
 )
 from app.schemas import Direction, LedgerEntry
@@ -147,9 +149,36 @@ def schedule_inflows(
     end: date,
     default_buffer_days: int = 7,
 ) -> list[CashEvent]:
-    """Schedule cash inflows from outstanding receivables, applying credit terms + buffer."""
+    """Schedule cash inflows from outstanding receivables + customer opening balances,
+    applying credit terms + buffer."""
     customer_map = {c.name.lower(): c for c in customers}
     events: list[CashEvent] = []
+
+    # Schedule customer opening balances (outstanding AR per customer) as immediate inflows.
+    # These are amounts already owed — schedule collection at start + credit buffer.
+    for customer in customers:
+        if not customer.active or customer.opening_balance <= 0:
+            continue
+        due_date = start  # already past due (owed now)
+        collection_date, fraction = _apply_credit_buffer(due_date, customer, default_buffer_days)
+        if collection_date <= end:
+            events.append(CashEvent(
+                date=collection_date,
+                amount=round(customer.opening_balance * fraction, 2),
+                direction="inflow",
+                source="opening_balance",
+                label=f"Opening AR - {customer.name}",
+            ))
+            if fraction < 1.0:
+                slip_date = collection_date + timedelta(days=14)
+                if slip_date <= end:
+                    events.append(CashEvent(
+                        date=slip_date,
+                        amount=round(customer.opening_balance * (1 - fraction), 2),
+                        direction="inflow",
+                        source="opening_balance",
+                        label=f"Late opening AR - {customer.name}",
+                    ))
 
     for entry in entries:
         if entry.direction != Direction.inflow:
@@ -196,25 +225,106 @@ def schedule_inflows(
     return events
 
 
+def _apply_payment_buffer(
+    due_date: date,
+    supplier: Supplier | None,
+    default_buffer_days: int = 5,
+) -> tuple[date, float]:
+    """Apply payment buffer to a supplier bill due date.
+    
+    For type=days: shifts the payment date; fraction=1.0.
+    For type=percent: same date; fraction = buffer_value / 100 (rest slips later).
+    """
+    if supplier is None:
+        return (due_date + timedelta(days=default_buffer_days), 1.0)
+
+    if supplier.payment_buffer_type == PaymentBufferType.days:
+        buffer_days = int(supplier.payment_buffer_value)
+        return (due_date + timedelta(days=buffer_days), 1.0)
+    else:  # percent
+        fraction = supplier.payment_buffer_value / 100.0
+        return (due_date, fraction)
+
+
 def schedule_outflows(
     entries: list[LedgerEntry],
+    suppliers: list[Supplier],
     start: date,
     end: date,
+    default_buffer_days: int = 5,
 ) -> list[CashEvent]:
-    """Schedule cash outflows from purchase bills and payables."""
+    """Schedule cash outflows from purchase bills, payables, and supplier opening balances,
+    applying supplier payment terms + buffer."""
+    supplier_map = {s.name.lower(): s for s in suppliers}
     events: list[CashEvent] = []
+
+    # Schedule supplier opening balances (outstanding AP per supplier) as immediate outflows.
+    # These are amounts you already owe — schedule payment at start + payment buffer.
+    for supplier in suppliers:
+        if not supplier.active or supplier.opening_balance <= 0:
+            continue
+        due_date = start  # already owed
+        payment_date, fraction = _apply_payment_buffer(due_date, supplier, default_buffer_days)
+        if payment_date <= end:
+            events.append(CashEvent(
+                date=payment_date,
+                amount=round(supplier.opening_balance * fraction, 2),
+                direction="outflow",
+                source="opening_balance",
+                label=f"Opening AP - {supplier.name}",
+            ))
+            if fraction < 1.0:
+                slip_date = payment_date + timedelta(days=14)
+                if slip_date <= end:
+                    events.append(CashEvent(
+                        date=slip_date,
+                        amount=round(supplier.opening_balance * (1 - fraction), 2),
+                        direction="outflow",
+                        source="opening_balance",
+                        label=f"Late opening AP - {supplier.name}",
+                    ))
 
     for entry in entries:
         if entry.direction != Direction.outflow:
             continue
-        if start <= entry.date <= end:
+
+        # Paid entries are already realized — schedule on their date.
+        if entry.status.value == "paid":
+            if start <= entry.date <= end:
+                events.append(CashEvent(
+                    date=entry.date,
+                    amount=entry.amount,
+                    direction="outflow",
+                    source="purchase",
+                    label=f"Purchase - {entry.category}" + (f" ({entry.customer_id})" if entry.customer_id else ""),
+                ))
+            continue
+
+        # Outstanding payable: apply supplier payment terms + buffer.
+        supplier = supplier_map.get((entry.customer_id or "").lower())
+        payment_days = supplier.payment_terms_days if supplier else 30
+        due_date = entry.date + timedelta(days=payment_days)
+        payment_date, fraction = _apply_payment_buffer(due_date, supplier, default_buffer_days)
+
+        if start <= payment_date <= end:
             events.append(CashEvent(
-                date=entry.date,
-                amount=entry.amount,
+                date=payment_date,
+                amount=round(entry.amount * fraction, 2),
                 direction="outflow",
                 source="purchase",
-                label=f"Purchase - {entry.category}",
+                label=f"Payable - {entry.category}" + (f" ({entry.customer_id})" if entry.customer_id else ""),
             ))
+            # If percent buffer, schedule the remainder 14 days later.
+            if fraction < 1.0:
+                slip_date = payment_date + timedelta(days=14)
+                if slip_date <= end:
+                    events.append(CashEvent(
+                        date=slip_date,
+                        amount=round(entry.amount * (1 - fraction), 2),
+                        direction="outflow",
+                        source="purchase",
+                        label=f"Late payable - {entry.category}" + (f" ({entry.customer_id})" if entry.customer_id else ""),
+                    ))
 
     return events
 
@@ -222,6 +332,7 @@ def schedule_outflows(
 def build_deterministic_projection(
     entries: list[LedgerEntry],
     customers: list[Customer],
+    suppliers: list[Supplier],
     fixed_expenses: list[FixedExpense],
     variable_expenses: list[VariableExpense],
     gst_config: GSTConfig | None,
@@ -234,7 +345,7 @@ def build_deterministic_projection(
     
     Steps:
     1. Schedule inflows (actual sales + outstanding with credit buffer applied).
-    2. Schedule outflows (actual purchases + payables on their dates).
+    2. Schedule outflows (purchases + payables with supplier payment terms + buffer).
     3. Auto-schedule fixed expenses (from frequency + last payment date).
     4. Place variable expenses on their expected dates.
     5. Schedule GST payments.
@@ -247,8 +358,8 @@ def build_deterministic_projection(
     # 1. Schedule inflows
     inflow_events = schedule_inflows(entries, customers, start, end, default_buffer_days)
 
-    # 2. Schedule outflows (purchases)
-    outflow_events = schedule_outflows(entries, start, end)
+    # 2. Schedule outflows (purchases with supplier terms + buffer)
+    outflow_events = schedule_outflows(entries, suppliers, start, end, default_buffer_days)
 
     # 3. Fixed expenses
     fixed_events: list[CashEvent] = []
