@@ -340,6 +340,7 @@ def build_deterministic_projection(
     currency: str = "INR",
     horizon_weeks: int = 13,
     default_buffer_days: int = 7,
+    granularity: str = "daily",
 ) -> DeterministicProjection:
     """Run the full deterministic scheduling engine and produce a projection.
     
@@ -386,10 +387,14 @@ def build_deterministic_projection(
     all_events = inflow_events + outflow_events + fixed_events + var_events + gst_events
     all_events.sort(key=lambda e: e.date)
 
-    # 6. Roll forward: build weekly periods
+    # 6. Roll forward: build periods (daily or weekly)
+    period_len = 1 if granularity == "daily" else 7
+    total_days = horizon_weeks * 7
+    num_periods = total_days // period_len
+
     periods: list[ProjectionPeriod] = []
     balance = opening_balance
-    runway_weeks: int | None = None
+    runway_days: int | None = None
     trough_balance = opening_balance
     trough_date: date | None = None
 
@@ -398,20 +403,20 @@ def build_deterministic_projection(
     inflow_summary: dict[str, float] = {}
     outflow_summary: dict[str, float] = {}
 
-    for week_idx in range(horizon_weeks):
-        period_start = start + timedelta(weeks=week_idx)
-        period_end = period_start + timedelta(days=6)
+    for idx in range(num_periods):
+        period_start = start + timedelta(days=idx * period_len)
+        period_end = period_start + timedelta(days=period_len - 1)
 
-        week_events = [e for e in all_events if period_start <= e.date <= period_end]
-        week_in = sum(e.amount for e in week_events if e.direction == "inflow")
-        week_out = sum(e.amount for e in week_events if e.direction == "outflow")
-        net = week_in - week_out
+        bucket_events = [e for e in all_events if period_start <= e.date <= period_end]
+        period_in = sum(e.amount for e in bucket_events if e.direction == "inflow")
+        period_out = sum(e.amount for e in bucket_events if e.direction == "outflow")
+        net = period_in - period_out
         balance += net
-        total_in += week_in
-        total_out += week_out
+        total_in += period_in
+        total_out += period_out
 
         # Track source breakdowns
-        for e in week_events:
+        for e in bucket_events:
             if e.direction == "inflow":
                 inflow_summary[e.source] = inflow_summary.get(e.source, 0.0) + e.amount
             else:
@@ -421,28 +426,29 @@ def build_deterministic_projection(
             trough_balance = balance
             trough_date = period_end
 
-        if balance < 0 and runway_weeks is None:
-            runway_weeks = week_idx
+        if balance < 0 and runway_days is None:
+            runway_days = idx * period_len
 
         periods.append(ProjectionPeriod(
             period_start=period_start,
             period_end=period_end,
-            inflows=round(week_in, 2),
-            outflows=round(week_out, 2),
+            inflows=round(period_in, 2),
+            outflows=round(period_out, 2),
             net=round(net, 2),
             closing_balance=round(balance, 2),
-            events=week_events,
+            events=bucket_events,
         ))
 
     return DeterministicProjection(
         generated_at=datetime.utcnow(),
         currency=currency,
+        granularity=granularity,
         opening_balance=opening_balance,
         closing_balance=round(balance, 2),
         total_inflows=round(total_in, 2),
         total_outflows=round(total_out, 2),
         net_cash_flow=round(total_in - total_out, 2),
-        runway_weeks=runway_weeks,
+        runway_days=runway_days,
         trough_balance=round(trough_balance, 2),
         trough_date=trough_date,
         periods=periods,

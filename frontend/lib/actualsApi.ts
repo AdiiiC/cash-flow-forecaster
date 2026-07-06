@@ -25,12 +25,13 @@ export interface ProjectionPeriod {
 export interface DeterministicProjection {
   generated_at: string;
   currency: string;
+  granularity: string;
   opening_balance: number;
   closing_balance: number;
   total_inflows: number;
   total_outflows: number;
   net_cash_flow: number;
-  runway_weeks: number | null;
+  runway_days: number | null;
   trough_balance: number;
   trough_date: string | null;
   periods: ProjectionPeriod[];
@@ -140,11 +141,13 @@ export async function fetchDemoProjection(params: {
   opening_balance?: number;
   currency?: string;
   horizon_weeks?: number;
+  granularity?: "daily" | "weekly";
 } = {}): Promise<DeterministicProjection> {
   const sp = new URLSearchParams();
   if (params.opening_balance != null) sp.set("opening_balance", String(params.opening_balance));
   if (params.currency) sp.set("currency", params.currency);
   if (params.horizon_weeks) sp.set("horizon_weeks", String(params.horizon_weeks));
+  if (params.granularity) sp.set("granularity", params.granularity);
 
   const res = await fetch(`${API_BASE}/api/actuals/project/demo?${sp}`, {
     method: "POST",

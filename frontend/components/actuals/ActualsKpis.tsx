@@ -9,10 +9,13 @@ function monthLabel(iso: string): string {
 }
 
 export function ActualsKpis({ data }: { data: DeterministicProjection }) {
+  const totalDays = data.periods.length * (data.granularity === "weekly" ? 7 : 1);
   const runwayLabel =
-    data.runway_weeks === null
-      ? `${data.periods.length}+ weeks`
-      : `${data.runway_weeks} weeks`;
+    data.runway_days === null
+      ? `${totalDays}+ days`
+      : data.runway_days >= 14
+        ? `${(data.runway_days / 7).toFixed(1)} weeks`
+        : `${data.runway_days} days`;
 
   const kpis = [
     {
@@ -33,7 +36,7 @@ export function ActualsKpis({ data }: { data: DeterministicProjection }) {
     {
       label: "Cash runway",
       value: runwayLabel,
-      hint: data.runway_weeks === null ? "Stays cash-positive" : "Weeks until balance goes negative",
+      hint: data.runway_days === null ? "Stays cash-positive" : "Time until balance goes negative",
     },
     {
       label: "Total inflows",

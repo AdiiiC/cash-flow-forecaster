@@ -33,7 +33,7 @@ export function ActualsCashFlowChart({ periods, currency }: Props) {
     <div style={{ width: "100%", height: 260 }}>
       <ResponsiveContainer>
         <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+          <XAxis dataKey="week" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={28} />
           <YAxis
             tick={{ fontSize: 11 }}
             tickFormatter={(v: number) => formatCurrency(v, currency, true)}

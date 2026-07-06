@@ -38,7 +38,7 @@ export function ActualsBalanceChart({ periods, currency }: Props) {
               <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+          <XAxis dataKey="week" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={28} />
           <YAxis
             tick={{ fontSize: 11 }}
             tickFormatter={(v: number) => formatCurrency(v, currency, true)}

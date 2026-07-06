@@ -215,7 +215,7 @@ class CashEvent(BaseModel):
 
 
 class ProjectionPeriod(BaseModel):
-    """A single period (week) in the deterministic projection."""
+    """A single period (day or week) in the deterministic projection."""
 
     period_start: date
     period_end: date
@@ -231,12 +231,13 @@ class DeterministicProjection(BaseModel):
 
     generated_at: datetime
     currency: str
+    granularity: str = "daily"  # "daily" | "weekly"
     opening_balance: float
     closing_balance: float  # final period's closing balance
     total_inflows: float
     total_outflows: float
     net_cash_flow: float
-    runway_weeks: int | None  # weeks until balance goes negative, None if always positive
+    runway_days: int | None  # days until balance goes negative, None if always positive
     trough_balance: float  # lowest balance encountered
     trough_date: date | None
     periods: list[ProjectionPeriod]

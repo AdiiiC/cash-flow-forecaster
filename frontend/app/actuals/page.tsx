@@ -22,6 +22,7 @@ export default function ActualsPage() {
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState("");
   const [slowHint, setSlowHint] = useState(false);
+  const [granularity, setGranularity] = useState<"daily" | "weekly">("daily");
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +36,7 @@ export default function ActualsPage() {
       opening_balance: 20_000_000,
       currency: "INR",
       horizon_weeks: 13,
+      granularity,
     })
       .then((res) => {
         if (!cancelled) {
@@ -57,7 +59,7 @@ export default function ActualsPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, []);
+  }, [granularity]);
 
   return (
     <div className="bz">
@@ -69,7 +71,7 @@ export default function ActualsPage() {
           </Link>
           {data && (
             <p className="bz-header-meta">
-              Actuals projection · {data.periods.length} weeks · {formatGeneratedAt(data.generated_at)}
+              Actuals projection · {data.periods.length} {data.granularity === "daily" ? "days" : "weeks"} · {formatGeneratedAt(data.generated_at)}
             </p>
           )}
         </div>
@@ -101,12 +103,28 @@ export default function ActualsPage() {
 
         {status === "ready" && data && (
           <>
-            <div className="bz-title">
-              <h1>Cash-flow from actuals</h1>
-              <p>
-                Deterministic projection based on real sales, purchases, expenses, and
-                credit terms — no ML, no guessing.
-              </p>
+            <div className="bz-title bz-title-row">
+              <div>
+                <h1>Cash-flow from actuals</h1>
+                <p>
+                  Deterministic projection based on real sales, purchases, expenses, and
+                  credit terms — no ML, no guessing.
+                </p>
+              </div>
+              <div className="cfg-tabs act-granularity" role="group" aria-label="Granularity">
+                <button
+                  className={`cfg-tab ${granularity === "daily" ? "active" : ""}`}
+                  onClick={() => setGranularity("daily")}
+                >
+                  Daily
+                </button>
+                <button
+                  className={`cfg-tab ${granularity === "weekly" ? "active" : ""}`}
+                  onClick={() => setGranularity("weekly")}
+                >
+                  Weekly
+                </button>
+              </div>
             </div>
 
             <ActualsKpis data={data} />
@@ -116,7 +134,7 @@ export default function ActualsPage() {
                 <div className="bz-panel-head">
                   <div>
                     <h2>Projected balance</h2>
-                    <p>Weekly closing balance rolled forward from opening cash</p>
+                    <p>{data.granularity === "daily" ? "Daily" : "Weekly"} closing balance rolled forward from opening cash</p>
                   </div>
                 </div>
                 <ActualsBalanceChart periods={data.periods} currency={data.currency} />
@@ -141,8 +159,8 @@ export default function ActualsPage() {
               <section className="bz-panel bz-panel-chart">
                 <div className="bz-panel-head">
                   <div>
-                    <h2>Weekly cash flow</h2>
-                    <p>Inflows vs outflows each week</p>
+                    <h2>{data.granularity === "daily" ? "Daily" : "Weekly"} cash flow</h2>
+                    <p>Inflows vs outflows each {data.granularity === "daily" ? "day" : "week"}</p>
                   </div>
                 </div>
                 <ActualsCashFlowChart periods={data.periods} currency={data.currency} />

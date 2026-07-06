@@ -255,6 +255,7 @@ async def run_projection(
     currency: str = Query("INR"),
     horizon_weeks: int = Query(13, ge=4, le=104),
     default_buffer_days: int = Query(7, ge=0, le=90),
+    granularity: str = Query("daily", pattern="^(daily|weekly)$"),
     user: dict | None = Depends(get_current_user_optional),
 ):
     """Upload a CSV of actual transactions and run the deterministic projection.
@@ -297,6 +298,7 @@ async def run_projection(
         currency=currency,
         horizon_weeks=horizon_weeks,
         default_buffer_days=default_buffer_days,
+        granularity=granularity,
     )
 
     return projection
@@ -307,6 +309,7 @@ def run_demo_projection(
     opening_balance: float = Query(20_000_000.0),
     currency: str = Query("INR"),
     horizon_weeks: int = Query(13, ge=4, le=104),
+    granularity: str = Query("daily", pattern="^(daily|weekly)$"),
 ):
     """Run a deterministic projection with sample data (no auth required).
     
@@ -328,6 +331,7 @@ def run_demo_projection(
         currency=currency,
         horizon_weeks=horizon_weeks,
         default_buffer_days=7,
+        granularity=granularity,
     )
 
     return projection
