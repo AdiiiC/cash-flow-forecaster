@@ -44,12 +44,29 @@ export interface CustomerInput {
   credit_period_days: number;
   credit_buffer_type: "days" | "percent";
   credit_buffer_value: number;
+  opening_balance: number;
   category?: string | null;
   notes?: string | null;
   active: boolean;
 }
 
 export interface Customer extends CustomerInput {
+  id: string;
+  created_at: string;
+}
+
+export interface SupplierInput {
+  name: string;
+  payment_terms_days: number;
+  payment_buffer_type: "days" | "percent";
+  payment_buffer_value: number;
+  opening_balance: number;
+  category?: string | null;
+  notes?: string | null;
+  active: boolean;
+}
+
+export interface Supplier extends SupplierInput {
   id: string;
   created_at: string;
 }
@@ -155,6 +172,32 @@ export async function createCustomer(inp: CustomerInput): Promise<Customer> {
 
 export async function deleteCustomer(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/actuals/customers/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new ApiError(`Delete failed (${res.status})`);
+}
+
+// ─── Suppliers ──────────────────────────────────────────────────────────────
+
+export async function fetchSuppliers(): Promise<Supplier[]> {
+  const res = await fetch(`${API_BASE}/api/actuals/suppliers`, {
+    headers: authHeaders(),
+  });
+  return handle<Supplier[]>(res);
+}
+
+export async function createSupplier(inp: SupplierInput): Promise<Supplier> {
+  const res = await fetch(`${API_BASE}/api/actuals/suppliers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(inp),
+  });
+  return handle<Supplier>(res);
+}
+
+export async function deleteSupplier(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/actuals/suppliers/${id}`, {
     method: "DELETE",
     headers: authHeaders(),
   });

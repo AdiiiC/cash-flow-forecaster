@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api";
-import { formatCurrency } from "@/lib/format";
 import { formatGeneratedAt } from "@/lib/format";
 import {
   DeterministicProjection,
@@ -75,6 +74,7 @@ export default function ActualsPage() {
           )}
         </div>
         <nav className="bz-header-nav">
+          <Link href="/actuals/config">Setup</Link>
           <Link href="/dashboard">Executive view</Link>
           <AuthMenu onAuthChange={() => undefined} />
         </nav>
