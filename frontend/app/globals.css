@@ -2266,3 +2266,65 @@ button:disabled {
     gap: 8px;
   }
 }
+
+/* ── Actuals breakdown ─────────────────────────────────────────────────── */
+.act-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.act-breakdown-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+.act-breakdown-title.pos { color: var(--pos); }
+.act-breakdown-title.neg { color: var(--neg); }
+.act-breakdown-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.act-breakdown-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.act-breakdown-row:last-child { border-bottom: none; }
+.act-breakdown-label {
+  flex: 1;
+  font-size: 0.85rem;
+}
+.act-breakdown-val {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.act-breakdown-pct {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  min-width: 32px;
+  text-align: right;
+}
+@media (max-width: 620px) {
+  .act-breakdown {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Actuals footer reuse */
+.bz-footer {
+  margin-top: 40px;
+  padding: 20px 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.bz-footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.bz-footer a:hover { color: var(--text); }

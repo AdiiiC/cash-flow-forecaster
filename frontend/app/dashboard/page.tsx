@@ -81,6 +81,7 @@ export default function DashboardPage() {
           )}
         </div>
         <nav className="bz-header-nav">
+          <Link href="/actuals">Actuals view</Link>
           <AuthMenu onAuthChange={() => undefined} />
         </nav>
       </header>
