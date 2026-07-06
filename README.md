@@ -1,6 +1,6 @@
 # Cash-Flow Forecaster
 
-A full-stack, **anti-slop** cash-flow forecasting app. It projects weekly cash
+A full-stack, cash-flow forecasting app. It projects weekly cash
 inflows, outflows and runway with **honest, backtested** probabilistic intervals —
 not a black box. Every number is grounded: mandatory naive baselines, walk-forward
 (no-leakage) evaluation, MASE / pinball / coverage metrics, split-conformal
