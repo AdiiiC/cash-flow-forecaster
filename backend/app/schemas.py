@@ -286,6 +286,68 @@ class InvoiceImpact(BaseModel):
     net_total: float  # expected_inflow - expected_outflow
 
 
+# ── ExIm — Export/Import foreign-currency invoices ─────────────────────────
+
+# Common currency codes accepted by frankfurter.app / ECB feed.
+SUPPORTED_FCY_CODES = {
+    "USD", "EUR", "GBP", "JPY", "AED", "SGD", "AUD",
+    "CAD", "CHF", "CNY", "HKD", "NZD", "SEK", "NOK",
+}
+
+
+class ExImInvoiceInput(BaseModel):
+    """A single cross-border trade receivable or payable."""
+
+    kind: InvoiceKind            # receivable = export inflow; payable = import outflow
+    counterparty: str = Field(..., min_length=1, max_length=120)
+    fcy_code: str = Field(..., min_length=3, max_length=8)   # foreign currency
+    fcy_amount: float = Field(..., gt=0)                      # amount in foreign currency
+    base_currency: str = Field("INR", min_length=3, max_length=8)  # your reporting currency
+    payment_terms_days: int = Field(..., ge=1, le=3650)
+    issue_date: date
+    category: str | None = Field(default=None, max_length=60)
+    notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator("counterparty")
+    @classmethod
+    def _strip_cp(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("counterparty must not be blank.")
+        return v
+
+    @field_validator("fcy_code", "base_currency")
+    @classmethod
+    def _upper_code(cls, v: str) -> str:
+        return v.strip().upper()
+
+
+class ExImInvoice(ExImInvoiceInput):
+    id: str
+    created_at: datetime
+    due_date: date              # issue_date + payment_terms_days
+    spot_rate: float            # rate on creation day
+    predicted_rate_p50: float
+    predicted_rate_p10: float
+    predicted_rate_p90: float
+    base_amount_p50: float      # fcy_amount * predicted_rate_p50
+    base_amount_p10: float
+    base_amount_p90: float
+    rate_model: str
+    predicted_at: date
+    status: InvoiceStatus
+    overdue: bool = False
+
+
+class ExImImpact(BaseModel):
+    """Summary of open ExIm invoices (for dashboard transparency)."""
+
+    count: int
+    expected_inflow_p50: float   # export receivables in base currency (p50)
+    expected_outflow_p50: float  # import payables in base currency (p50)
+    net_p50: float
+
+
 class Thresholds(BaseModel):
     min_balance: float | None = None  # alert if projected balance dips below this
     min_runway_weeks: float | None = None  # alert if runway shorter than this

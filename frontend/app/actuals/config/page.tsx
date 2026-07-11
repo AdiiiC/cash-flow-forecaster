@@ -10,8 +10,9 @@ import { SupplierManager } from "@/components/actuals/config/SupplierManager";
 import { FixedExpenseManager } from "@/components/actuals/config/FixedExpenseManager";
 import { VariableExpenseManager } from "@/components/actuals/config/VariableExpenseManager";
 import { GSTManager } from "@/components/actuals/config/GSTManager";
+import { ExImManager } from "@/components/actuals/config/ExImManager";
 
-type Tab = "customers" | "suppliers" | "fixed" | "variable" | "gst";
+type Tab = "customers" | "suppliers" | "fixed" | "variable" | "gst" | "exim";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "customers", label: "Customers" },
@@ -19,6 +20,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "fixed", label: "Fixed expenses" },
   { id: "variable", label: "Variable expenses" },
   { id: "gst", label: "GST" },
+  { id: "exim", label: "ExIm" },
 ];
 
 export default function ConfigPage() {
@@ -88,6 +90,7 @@ export default function ConfigPage() {
               {tab === "fixed" && <FixedExpenseManager />}
               {tab === "variable" && <VariableExpenseManager />}
               {tab === "gst" && <GSTManager />}
+              {tab === "exim" && <ExImManager />}
             </section>
           </>
         )}

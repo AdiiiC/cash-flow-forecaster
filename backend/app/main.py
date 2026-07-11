@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.routers import auth, forecast, invoices, recurring, scenarios
+from app.routers.exim import router as exim_router
 from app.actuals.router import router as actuals_router
 from app.store import init_db
 
@@ -63,6 +64,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(recurring.router, prefix="/api")
 app.include_router(invoices.router, prefix="/api")
+app.include_router(exim_router, prefix="/api")
 app.include_router(actuals_router, prefix="/api")
 
 

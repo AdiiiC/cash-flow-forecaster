@@ -120,6 +120,34 @@ _invoices = Table(
     Column("created_at", String(40), nullable=False),
 )
 
+_exim_invoices = Table(
+    "exim_invoices",
+    _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("kind", String(16), nullable=False),         # receivable | payable
+    Column("counterparty", Text, nullable=False),       # encrypted at rest
+    Column("fcy_code", String(8), nullable=False),      # foreign currency code
+    Column("fcy_amount", Float, nullable=False),        # amount in foreign currency
+    Column("base_currency", String(8), nullable=False), # reporting currency
+    Column("payment_terms_days", Integer, nullable=False),
+    Column("issue_date", String(20), nullable=False),
+    Column("due_date", String(20), nullable=False),
+    Column("spot_rate", Float, nullable=False),
+    Column("predicted_rate_p50", Float, nullable=False),
+    Column("predicted_rate_p10", Float, nullable=False),
+    Column("predicted_rate_p90", Float, nullable=False),
+    Column("base_amount_p50", Float, nullable=False),
+    Column("base_amount_p10", Float, nullable=False),
+    Column("base_amount_p90", Float, nullable=False),
+    Column("rate_model", String(60), nullable=False),
+    Column("predicted_at", String(20), nullable=False),
+    Column("status", String(16), nullable=False),
+    Column("category", String(60), nullable=True),
+    Column("notes", Text, nullable=True),
+    Column("created_at", String(40), nullable=False),
+)
+
 
 def _resolve_url() -> str:
     """Pick the connection URL and normalise it for the psycopg 3 driver."""
@@ -552,4 +580,122 @@ def delete_invoice(invoice_id: str, user_id: str) -> bool:
         )
     return bool(result.rowcount)
 
+
+# ---- ExIm (export/import) foreign-currency invoices -------------------------
+
+
+def _exim_to_dict(row) -> dict:
+    from app.security import crypto
+
+    d = dict(row)
+    d["counterparty"] = crypto.decrypt(d["counterparty"])
+    return d
+
+
+def save_exim(
+    user_id: str,
+    *,
+    kind: str,
+    counterparty: str,
+    fcy_code: str,
+    fcy_amount: float,
+    base_currency: str,
+    payment_terms_days: int,
+    issue_date: str,
+    due_date: str,
+    spot_rate: float,
+    predicted_rate_p50: float,
+    predicted_rate_p10: float,
+    predicted_rate_p90: float,
+    base_amount_p50: float,
+    base_amount_p10: float,
+    base_amount_p90: float,
+    rate_model: str,
+    predicted_at: str,
+    status: str,
+    category: str | None,
+    notes: str | None,
+) -> dict:
+    from app.security import crypto
+
+    _ensure()
+    exim_id = uuid.uuid4().hex[:12]
+    created_at = datetime.utcnow().isoformat()
+    with _engine().begin() as conn:
+        conn.execute(
+            insert(_exim_invoices).values(
+                id=exim_id,
+                user_id=user_id,
+                kind=kind,
+                counterparty=crypto.encrypt(counterparty),
+                fcy_code=fcy_code,
+                fcy_amount=fcy_amount,
+                base_currency=base_currency,
+                payment_terms_days=payment_terms_days,
+                issue_date=issue_date,
+                due_date=due_date,
+                spot_rate=spot_rate,
+                predicted_rate_p50=predicted_rate_p50,
+                predicted_rate_p10=predicted_rate_p10,
+                predicted_rate_p90=predicted_rate_p90,
+                base_amount_p50=base_amount_p50,
+                base_amount_p10=base_amount_p10,
+                base_amount_p90=base_amount_p90,
+                rate_model=rate_model,
+                predicted_at=predicted_at,
+                status=status,
+                category=category,
+                notes=notes,
+                created_at=created_at,
+            )
+        )
+    return get_exim(exim_id, user_id)
+
+
+def get_exim(exim_id: str, user_id: str) -> dict | None:
+    _ensure()
+    stmt = select(_exim_invoices).where(
+        _exim_invoices.c.id == exim_id,
+        _exim_invoices.c.user_id == user_id,
+    )
+    with _engine().connect() as conn:
+        row = conn.execute(stmt).mappings().first()
+    return _exim_to_dict(row) if row else None
+
+
+def list_exim(user_id: str, *, open_only: bool = False) -> list[dict]:
+    _ensure()
+    stmt = select(_exim_invoices).where(_exim_invoices.c.user_id == user_id)
+    if open_only:
+        stmt = stmt.where(_exim_invoices.c.status == "open")
+    stmt = stmt.order_by(_exim_invoices.c.due_date.asc())
+    with _engine().connect() as conn:
+        rows = conn.execute(stmt).mappings().all()
+    return [_exim_to_dict(r) for r in rows]
+
+
+def set_exim_status(exim_id: str, user_id: str, status: str) -> bool:
+    _ensure()
+    with _engine().begin() as conn:
+        result = conn.execute(
+            _exim_invoices.update()
+            .where(
+                _exim_invoices.c.id == exim_id,
+                _exim_invoices.c.user_id == user_id,
+            )
+            .values(status=status)
+        )
+    return bool(result.rowcount)
+
+
+def delete_exim(exim_id: str, user_id: str) -> bool:
+    _ensure()
+    with _engine().begin() as conn:
+        result = conn.execute(
+            delete(_exim_invoices).where(
+                _exim_invoices.c.id == exim_id,
+                _exim_invoices.c.user_id == user_id,
+            )
+        )
+    return bool(result.rowcount)
 
