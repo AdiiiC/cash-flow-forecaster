@@ -38,8 +38,6 @@ export default function DashboardPage() {
     let cancelled = false;
     setStatus("loading");
     setSlowHint(false);
-    // If the first response is slow (e.g. the backend is waking from idle),
-    // reassure the visitor instead of showing a silent spinner.
     const slowTimer = setTimeout(() => {
       if (!cancelled) setSlowHint(true);
     }, 4000);
@@ -57,11 +55,9 @@ export default function DashboardPage() {
             : "Backend unreachable. Is the API running on :8000?",
         );
         setStatus("error");
-      });
-    return () => {
-      cancelled = true;
-      clearTimeout(slowTimer);
-    };
+      })
+      .finally(() => clearTimeout(slowTimer));
+    return () => { cancelled = true; clearTimeout(slowTimer); };
   }, []);
 
   const view = useMemo(() => (data ? toBusinessView(data) : null), [data]);
@@ -87,9 +83,14 @@ export default function DashboardPage() {
       </header>
 
       <main className="bz-main">
+        <div className="bz-title">
+          <h1>Your cash-flow snapshot</h1>
+          <p>A clear read on where your money stands and where it&apos;s heading.</p>
+        </div>
+
         {status === "loading" && (
           <div className="bz-state">
-            Loading your cash-flow snapshot…
+            Running your forecast…
             {slowHint && (
               <p className="bz-state-hint">
                 Waking the server — the first load after a quiet spell can take up
@@ -107,11 +108,6 @@ export default function DashboardPage() {
 
         {status === "ready" && view && (
           <>
-            <div className="bz-title">
-              <h1>Your cash-flow snapshot</h1>
-              <p>A clear read on where your money stands and where it&apos;s heading.</p>
-            </div>
-
             <BizKpiGrid kpis={view.kpis} />
 
             <div className="bz-row bz-row-wide">

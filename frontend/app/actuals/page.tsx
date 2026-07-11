@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { formatGeneratedAt } from "@/lib/format";
@@ -14,6 +14,17 @@ import { ActualsKpis } from "@/components/actuals/ActualsKpis";
 import { ActualsBalanceChart } from "@/components/actuals/ActualsBalanceChart";
 import { ActualsCashFlowChart } from "@/components/actuals/ActualsCashFlowChart";
 import { ActualsBreakdown } from "@/components/actuals/ActualsBreakdown";
+import {
+  ActualsInputPanel,
+  type ActualsParams,
+} from "@/components/actuals/ActualsInputPanel";
+
+const DEFAULT_PARAMS: ActualsParams = {
+  opening_balance: 20_000_000,
+  currency: "INR",
+  horizon_weeks: 13,
+  granularity: "daily",
+};
 
 type Status = "loading" | "ready" | "error";
 
@@ -22,22 +33,19 @@ export default function ActualsPage() {
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState("");
   const [slowHint, setSlowHint] = useState(false);
-  const [granularity, setGranularity] = useState<"daily" | "weekly">("daily");
+  const [runParams, setRunParams] = useState<ActualsParams>(DEFAULT_PARAMS);
 
-  useEffect(() => {
-    let cancelled = false;
+  const runProjection = useCallback((p: ActualsParams) => {
+    setRunParams(p);
+    setData(null);
     setStatus("loading");
     setSlowHint(false);
+    let cancelled = false;
     const timer = setTimeout(() => {
       if (!cancelled) setSlowHint(true);
     }, 4000);
 
-    fetchDemoProjection({
-      opening_balance: 20_000_000,
-      currency: "INR",
-      horizon_weeks: 13,
-      granularity,
-    })
+    fetchDemoProjection(p)
       .then((res) => {
         if (!cancelled) {
           setData(res);
@@ -53,13 +61,18 @@ export default function ActualsPage() {
           );
           setStatus("error");
         }
-      });
+      })
+      .finally(() => clearTimeout(timer));
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [granularity]);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, []);
+
+  const didMount = useRef(false);
+  useEffect(() => {
+    if (didMount.current) return;
+    didMount.current = true;
+    runProjection(DEFAULT_PARAMS);
+  }, [runProjection]);
 
   return (
     <div className="bz">
@@ -83,6 +96,20 @@ export default function ActualsPage() {
       </header>
 
       <main className="bz-main">
+        <div className="bz-title">
+          <h1>Cash-flow from actuals</h1>
+          <p>
+            Deterministic projection based on real sales, purchases, expenses, and
+            credit terms — no ML, no guessing.
+          </p>
+        </div>
+
+        <ActualsInputPanel
+          params={runParams}
+          onRun={runProjection}
+          loading={status === "loading"}
+        />
+
         {status === "loading" && (
           <div className="bz-state">
             Loading actuals projection…
@@ -103,29 +130,6 @@ export default function ActualsPage() {
 
         {status === "ready" && data && (
           <>
-            <div className="bz-title bz-title-row">
-              <div>
-                <h1>Cash-flow from actuals</h1>
-                <p>
-                  Deterministic projection based on real sales, purchases, expenses, and
-                  credit terms — no ML, no guessing.
-                </p>
-              </div>
-              <div className="cfg-tabs act-granularity" role="group" aria-label="Granularity">
-                <button
-                  className={`cfg-tab ${granularity === "daily" ? "active" : ""}`}
-                  onClick={() => setGranularity("daily")}
-                >
-                  Daily
-                </button>
-                <button
-                  className={`cfg-tab ${granularity === "weekly" ? "active" : ""}`}
-                  onClick={() => setGranularity("weekly")}
-                >
-                  Weekly
-                </button>
-              </div>
-            </div>
 
             <ActualsKpis data={data} />
 
