@@ -247,7 +247,6 @@ def _apply_payment_buffer(
 
 
 def schedule_outflows(
-    entries: list[LedgerEntry],
     suppliers: list[Supplier],
     start: date,
     end: date,
@@ -329,6 +328,45 @@ def schedule_outflows(
     return events
 
 
+def _exim_to_cash_events(
+    exim_invoices: list[dict],
+    start: date,
+    end: date,
+) -> list[CashEvent]:
+    """Convert open ExIm invoices into CashEvents at their predicted base-currency amount.
+
+    Uses base_amount_p50 (the 50th-percentile fx-adjusted amount) so the
+    cashflow statement reflects the most likely settlement value.
+    Past-due items are bucketed to *start* (treat as imminent).
+    Items due beyond the horizon are excluded.
+    """
+    events: list[CashEvent] = []
+    for inv in exim_invoices:
+        if inv.get("status") != "open":
+            continue
+        raw_due = inv["due_date"]
+        due = raw_due if isinstance(raw_due, date) else date.fromisoformat(raw_due)
+        if due > end:
+            continue  # outside projection window
+        landing = max(due, start)  # past-due → land today
+
+        kind = inv["kind"]          # "receivable" | "payable"
+        direction = "inflow" if kind == "receivable" else "outflow"
+        fcy_code = inv["fcy_code"]
+        fcy_amount = inv["fcy_amount"]
+        counterparty = inv["counterparty"]
+        trade_label = "Export" if kind == "receivable" else "Import"
+
+        events.append(CashEvent(
+            date=landing,
+            amount=round(float(inv["base_amount_p50"]), 2),
+            direction=direction,
+            source="exim",
+            label=f"{trade_label} - {counterparty} ({fcy_amount:,.0f} {fcy_code})",
+        ))
+    return events
+
+
 def build_deterministic_projection(
     entries: list[LedgerEntry],
     customers: list[Customer],
@@ -341,16 +379,18 @@ def build_deterministic_projection(
     horizon_weeks: int = 13,
     default_buffer_days: int = 7,
     granularity: str = "daily",
+    exim_invoices: list[dict] | None = None,
 ) -> DeterministicProjection:
     """Run the full deterministic scheduling engine and produce a projection.
-    
+
     Steps:
     1. Schedule inflows (actual sales + outstanding with credit buffer applied).
     2. Schedule outflows (purchases + payables with supplier payment terms + buffer).
     3. Auto-schedule fixed expenses (from frequency + last payment date).
     4. Place variable expenses on their expected dates.
     5. Schedule GST payments.
-    6. Roll forward balance period by period (weekly).
+    6. Fold in open ExIm (export/import) invoices at their predicted base-currency amount.
+    7. Roll forward balance period by period (weekly).
     """
     today = date.today()
     start = today
@@ -383,8 +423,11 @@ def build_deterministic_projection(
     total_taxable_inflows = sum(e.amount for e in inflow_events)
     gst_events = _generate_gst_payments(gst_config, total_taxable_inflows, start, end)
 
+    # 6. ExIm invoices — open AR/AP in foreign currency, landed at predicted base amount
+    exim_events = _exim_to_cash_events(exim_invoices or [], start, end)
+
     # Combine all events
-    all_events = inflow_events + outflow_events + fixed_events + var_events + gst_events
+    all_events = inflow_events + outflow_events + fixed_events + var_events + gst_events + exim_events
     all_events.sort(key=lambda e: e.date)
 
     # 6. Roll forward: build periods (daily or weekly)

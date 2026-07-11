@@ -9,9 +9,16 @@ interface Props {
 }
 
 function humanLabel(key: string): string {
-  return key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const overrides: Record<string, string> = {
+    exim: "Export / Import (ExIm)",
+    gst: "GST",
+    opening_balance: "Opening Balance",
+    fixed_expense: "Fixed Expenses",
+    variable_expense: "Variable Expenses",
+    sales: "Sales",
+    purchase: "Purchases",
+  };
+  return overrides[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function sortedEntries(obj: Record<string, number>): [string, number][] {

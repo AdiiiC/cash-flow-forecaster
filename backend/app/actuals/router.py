@@ -287,6 +287,9 @@ async def run_projection(
     variable = list_variable_expenses(engine, u["id"])
     gst = get_gst_config(engine, u["id"])
 
+    from app import store as _main_store
+    exim = _main_store.list_exim(u["id"], open_only=True)
+
     projection = build_deterministic_projection(
         entries=ledger.entries,
         customers=customers,
@@ -299,6 +302,7 @@ async def run_projection(
         horizon_weeks=horizon_weeks,
         default_buffer_days=default_buffer_days,
         granularity=granularity,
+        exim_invoices=exim,
     )
 
     return projection
