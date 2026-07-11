@@ -53,7 +53,7 @@ def test_fx_predict_short_horizon():
 
 
 def test_fx_predict_long_horizon():
-    """N > 7 uses the ensemble model."""
+    """N > 7 uses the adaptive ensemble model."""
     from app.fx_history import RatePoint
 
     # 30 days of slightly upward-trending rates
@@ -63,7 +63,7 @@ def test_fx_predict_long_horizon():
     ]
     with patch("app.fx_history.fetch_history", return_value=fake_history):
         pred = predict("USD", "INR", 30)
-    assert pred.model == "drift_damped_holt_ensemble"
+    assert pred.model == "adaptive_ensemble_ewma"
     assert pred.rate_p10 < pred.rate_p50 < pred.rate_p90
     # Interval widens with horizon
     assert pred.rate_p90 - pred.rate_p10 > 0.5
@@ -73,6 +73,50 @@ def test_fx_predict_no_history_raises():
     with patch("app.fx_history.fetch_history", return_value=[]):
         with pytest.raises(ValueError, match="No rate history"):
             predict("USD", "INR", 30)
+
+
+def test_interval_widens_with_horizon():
+    """Longer horizon => wider interval (fat-tail + EWMA vol scaling)."""
+    from app.fx_history import RatePoint
+
+    # Flat rates with small random-walk noise (realistic)
+    import random
+    random.seed(42)
+    base_rate = 83.5
+    rates = [base_rate]
+    for _ in range(59):
+        rates.append(rates[-1] * (1 + random.gauss(0, 0.004)))
+    fake_history = [
+        RatePoint(date.today() - timedelta(days=59 - i), r) for i, r in enumerate(rates)
+    ]
+    with patch("app.fx_history.fetch_history", return_value=fake_history):
+        pred_30 = predict("USD", "INR", 30)
+        pred_60 = predict("USD", "INR", 60)
+
+    width_30 = pred_30.rate_p90 - pred_30.rate_p10
+    width_60 = pred_60.rate_p90 - pred_60.rate_p10
+    assert width_60 > width_30, "60-day interval must be wider than 30-day"
+
+
+def test_drift_shrinks_toward_holt_at_long_horizons():
+    """Horizon-adaptive weight: long-horizon p50 should be closer to Holt than drift."""
+    from app.fx_history import RatePoint
+
+    # Strong upward trend — drift would over-extrapolate
+    rates = [80.0 + i * 0.3 for i in range(30)]  # +9 over 30 days
+    fake_history = [
+        RatePoint(date.today() - timedelta(days=29 - i), r) for i, r in enumerate(rates)
+    ]
+    with patch("app.fx_history.fetch_history", return_value=fake_history):
+        pred_short = predict("USD", "INR", 10)   # drift matters
+        pred_long = predict("USD", "INR", 90)    # drift shrunk, Holt dominates
+
+    spot = rates[-1]
+    # At 10 days drift contributes more, so p50 is further from spot than at 90 days
+    # (relative to spot, long-horizon should not extrapolate the full trend)
+    overshoot_short = (pred_short.rate_p50 - spot) / 10
+    overshoot_long = (pred_long.rate_p50 - spot) / 90
+    assert overshoot_long < overshoot_short, "Per-day overshoot must shrink at longer horizons"
 
 
 # ── API CRUD tests ───────────────────────────────────────────────────────────

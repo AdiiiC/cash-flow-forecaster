@@ -1,20 +1,36 @@
 """Lightweight FX rate forecasting.
 
-Uses a drift + damped-Holt ensemble for the point estimate and a
-log-return-volatility scaled interval (sigma * sqrt(N)) for the band.
+Model: horizon-adaptive drift + damped-Holt ensemble, EWMA volatility,
+fat-tail interval correction.
 
-Design rationale
-----------------
-90 daily observations is too short for full ARIMA/GARCH.  The ensemble
-of a drift extrapolation and a damped Holt smoother (phi=0.9) outperforms
-either alone on short financial series, mirroring the M3 Competition
-findings that simple weighted combinations beat complex single models.
-The interval uses log-return sigma scaled by sqrt(horizon) — a standard
-risk-neutral approximation — yielding ~90% empirical coverage on typical
-major-pair 30-day holds.
+Statistical efficiency rationale
+---------------------------------
+Three known inefficiencies in naive short-series FX forecasting are addressed:
 
-N <= 7 shortcut: at very short horizons the model adds noise rather than
-signal.  We return spot +/- 0.5% slippage instead.
+1. Horizon-adaptive drift weight
+   In liquid FX markets returns are close to a random walk (Efficient Market
+   Hypothesis).  Trend signal from a 20-day drift decays quickly with horizon:
+   the drift weight is exp(-h * ln2 / t_half) where t_half = 45 days.
+   At h=7d the drift still contributes ~89%; at h=30d only ~63%; at h=90d
+   only ~25%.  This shrinks the point estimate toward the martingale (spot)
+   at long horizons where trend extrapolation adds bias with no accuracy gain.
+
+2. EWMA volatility (RiskMetrics λ=0.94)
+   A simple rolling-window average weights all observations equally.  FX
+   returns exhibit volatility clustering (ARCH effects): recent squared
+   returns are far more informative about near-future vol than returns from
+   three weeks ago.  EWMA (λ=0.94) gives exponentially decaying weights,
+   producing a more efficient variance estimator on daily financial series.
+
+3. Fat-tail interval correction
+   Gaussian z=1.645 assumes normal log-returns.  Major-pair FX returns have
+   excess kurtosis ≈ 2-4 (Student-t with ≈7 df), meaning the 90% Gaussian
+   interval systematically undercoveres in volatile regimes.  A multiplicative
+   correction of 1.15 (derived from t_{0.95}(df=7) / z_{0.95} ≈ 2.00/1.645)
+   widens the interval to give honest coverage without requiring an explicit
+   df estimation on the short sample.
+
+N ≤ 7 shortcut: model adds noise below a week; use spot ± 0.5% slippage.
 """
 from __future__ import annotations
 
@@ -34,15 +50,33 @@ class FxPrediction(NamedTuple):
     as_of: date         # date on which prediction was made
 
 
-_SLIPPAGE = 0.005   # 0.5% spot band for very short horizons
-_Z90 = 1.645        # z-score for ~90% interval under log-normal assumption
+_SLIPPAGE = 0.005         # 0.5% spot band for very short horizons (N ≤ 7)
+_Z90 = 1.645              # Gaussian z for ~90% one-sided coverage
+_TAIL_FACTOR = 1.15       # Student-t(df≈7) fat-tail correction for FX returns
+_EWMA_LAMBDA = 0.94       # RiskMetrics exponential decay for variance
+_DRIFT_HALFLIFE = 45.0    # days at which drift weight halves (≈ trend persistence)
+
+
+def _ewma_sigma(log_returns: list[float]) -> float:
+    """EWMA daily volatility (RiskMetrics λ=0.94).
+
+    Initialise with the first squared return then update with exponential
+    decay.  More responsive to recent vol spikes than a rolling window.
+    """
+    if not log_returns:
+        return 0.005  # 0.5% daily fallback
+    var = log_returns[0] ** 2
+    for r in log_returns[1:]:
+        var = _EWMA_LAMBDA * var + (1.0 - _EWMA_LAMBDA) * r * r
+    return math.sqrt(max(var, 1e-12))
 
 
 def predict(base: str, quote: str, horizon_days: int) -> FxPrediction:
-    """Predict the *base*/*quote* spot rate at *horizon_days* from today.
+    """Predict the *base*/*quote* rate at *horizon_days* from today.
 
     Returns a FxPrediction with p10/p50/p90 bounds.
-    Raises on network failure — callers should fall back to the static rate.
+    Raises ValueError if no history is available.
+    Network errors propagate — callers should wrap in try/except.
     """
     from app.fx_history import fetch_history
 
@@ -77,28 +111,29 @@ def predict(base: str, quote: str, horizon_days: int) -> FxPrediction:
         l_prev, b_prev = lvl, trend
         lvl = alpha * r + (1.0 - alpha) * (l_prev + phi * b_prev)
         trend = beta * (lvl - l_prev) + (1.0 - beta) * phi * b_prev
-    # Sum of damped multipliers Σ_{j=1}^{h} φ^j = φ(1 - φ^h)/(1 - φ)
     damp_sum = phi * (1.0 - phi ** horizon_days) / (1.0 - phi)
     holt_pred = lvl + damp_sum * trend
 
-    # ── Ensemble (equal weight) ────────────────────────────────────────────
-    p50 = 0.5 * drift_pred + 0.5 * holt_pred
+    # ── Horizon-adaptive ensemble weight ──────────────────────────────────
+    # drift_weight decays with horizon; Holt (which damps its own trend via
+    # phi) carries increasing weight at longer horizons — closer to martingale.
+    drift_weight = math.exp(-horizon_days * math.log(2.0) / _DRIFT_HALFLIFE)
+    p50 = drift_weight * drift_pred + (1.0 - drift_weight) * holt_pred
 
-    # ── Log-return volatility (rolling 20-day window) ─────────────────────
-    start_i = max(1, n - 20)
+    # ── EWMA log-return volatility ─────────────────────────────────────────
+    # Use all available history (up to 90 days) for a stable EWMA estimate.
+    start_i = max(1, n - 90)
     log_returns = [
         math.log(rates[i] / rates[i - 1])
         for i in range(start_i, n)
         if rates[i - 1] > 0 and rates[i] > 0
     ]
-    if log_returns:
-        sigma_daily = math.sqrt(sum(r * r for r in log_returns) / len(log_returns))
-    else:
-        sigma_daily = 0.005  # 0.5% daily fallback
+    sigma_daily = _ewma_sigma(log_returns)
 
-    sigma_h = sigma_daily * math.sqrt(horizon_days)
+    # σ√h scaling; fat-tail correction for FX kurtosis (equivalent to t_df≈7)
+    sigma_h = sigma_daily * math.sqrt(horizon_days) * _TAIL_FACTOR
 
-    # Log-normal interval: p50 * exp(±z * sigma_h)
+    # Log-normal interval centred on p50
     p_lo = p50 * math.exp(-_Z90 * sigma_h)
     p_hi = p50 * math.exp(_Z90 * sigma_h)
     lo, hi = (p_lo, p_hi) if p_lo < p_hi else (p_hi, p_lo)
@@ -110,6 +145,7 @@ def predict(base: str, quote: str, horizon_days: int) -> FxPrediction:
         rate_p10=round(lo, 4),
         rate_p90=round(hi, 4),
         spot_today=round(spot, 4),
-        model="drift_damped_holt_ensemble",
+        model="adaptive_ensemble_ewma",
         as_of=date.today(),
     )
+
