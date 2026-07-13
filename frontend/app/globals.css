@@ -2495,12 +2495,14 @@ button:disabled {
 
 /* Shared segmented control for currency + horizon */
 .dip-seg {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .dip-seg-btn {
+  flex: 1;
   background: none;
   border: none;
   border-right: 1px solid var(--hairline-strong);
@@ -2509,6 +2511,7 @@ button:disabled {
   font-weight: 500;
   padding: var(--space-2) var(--space-4);
   cursor: pointer;
+  text-align: center;
   transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
   white-space: nowrap;
 }
@@ -3312,4 +3315,13 @@ button:disabled {
   .biz-sidenav-section-label { display: none; }
   .biz-sidenav-item { padding: 6px 10px; font-size: .8rem; border-radius: 6px; }
   .biz-sidenav-item--active { border-left: none; border-bottom: 2px solid var(--accent,#f59e0b); padding-left: 10px; }
+}
+
+/* Hide redundant page header and footer when BizNav sidebar is present */
+.biz-layout .bz-header { display: none; }
+.biz-layout .bz-footer { display: none; }
+
+/* DevUnlock — float above everything including the sidebar */
+[class*="dev-unlock"], button[title*="DevUnlock"], button[title*="Unlock"] {
+  z-index: 9999 !important;
 }
