@@ -76,7 +76,8 @@ class StressTestResponse(BaseModel):
 @router.post("", response_model=StressTestResponse)
 def stress_test(body: StressTestRequest,
                 user: dict | None = Depends(get_current_user_optional)):
-from app.schemas import SyntheticRequest
+    from app.schemas import SyntheticRequest
+    from app.data.synthetic import generate_ledger
 
     user_id = user["id"] if user else None
 
@@ -89,7 +90,9 @@ from app.schemas import SyntheticRequest
             currency=body.currency,
             scenario=scenario,
         )
-        return build_forecast(req, source="stress_test", user_id=user_id, persist=False)
+        ledger = generate_ledger(req)
+        return build_forecast(ledger, source="stress_test", user_id=user_id,
+                               persist=False, use_cache=False)
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(body.scenarios))) as ex:
