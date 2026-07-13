@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { ApiError, fetchMe, login, logout, register, UserPublic } from "@/lib/api";
 
@@ -82,7 +83,7 @@ export function AuthMenu({ onAuthChange }: Props) {
         Sign in
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div className="auth-overlay" role="dialog" aria-modal="true" onClick={closeModal}>
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <div className="auth-tabs">
@@ -141,7 +142,8 @@ export function AuthMenu({ onAuthChange }: Props) {
               ×
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
