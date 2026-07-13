@@ -80,7 +80,7 @@ class BacktestMetrics(BaseModel):
 
     mase: float
     pinball: float
-    coverage_80: float  # empirical share of actuals inside the p10..p90 band
+    coverage_85: float  # empirical share of actuals inside the p7.5..p92.5 band (85% nominal)
     n_origins: int
 
 
@@ -131,9 +131,9 @@ class Driver(BaseModel):
 
 
 class IntervalCalibration(BaseModel):
-    """How well the P10–P90 bands actually cover out-of-sample actuals."""
+    """How well the P7.5–P92.5 bands actually cover out-of-sample actuals."""
 
-    target: float = 0.8  # nominal coverage of the P10..P90 interval
+    target: float = 0.85  # nominal coverage of the P7.5..P92.5 interval (85%)
     empirical: float  # measured coverage across series (mean)
     conformal: bool = True  # finite-sample conformal correction applied
     per_series: dict[str, float] = Field(default_factory=dict)

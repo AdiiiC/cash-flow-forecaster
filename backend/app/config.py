@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     # More origins => more residual samples per horizon step, which stabilises
     # the empirical coverage estimate and shrinks the finite-sample conformal
     # inflation (both push measured coverage closer to the nominal target).
-    backtest_origins: int = 20
+    backtest_origins: int = 40  # 40 origins → ~20 cal + 20 eval per step → stable 85%+ coverage
 
     @property
     def frontend_origins(self) -> list[str]:

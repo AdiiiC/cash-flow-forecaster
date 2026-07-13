@@ -43,7 +43,7 @@ def _tiny_forecast() -> ForecastResponse:
             unit=unit,
             model="naive",
             candidates={"naive": 1.0},
-            metrics={"mase": 1.0, "pinball": 1.0, "coverage_80": 0.8, "n_origins": 5},
+            metrics={"mase": 1.0, "pinball": 1.0, "coverage_85": 0.85, "n_origins": 5},
             history=[],
             forecast=[
                 ForecastPoint(period="2026-07-05", p10=base - 10, p50=base, p90=base + 10),

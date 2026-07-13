@@ -143,15 +143,15 @@ def build_base_forecast(
         progress(0.85, "Decomposing drivers")
     categories, drivers = analyze_categories(ledger, inflow_total, outflow_total)
 
-    # Interval calibration: mean empirical P10-P90 coverage across series.
+    # Interval calibration: mean empirical P7.5-P92.5 coverage across series (85% nominal band).
     per_series = {
-        f.name: f.metrics.coverage_80
+        f.name: f.metrics.coverage_85
         for f in forecasts
-        if f.metrics.coverage_80 == f.metrics.coverage_80  # exclude NaN
+        if f.metrics.coverage_85 == f.metrics.coverage_85  # exclude NaN
     }
     empirical = round(sum(per_series.values()) / len(per_series), 3) if per_series else float("nan")
     calibration = IntervalCalibration(
-        target=0.8, empirical=empirical, conformal=True, per_series=per_series
+        target=0.85, empirical=empirical, conformal=True, per_series=per_series
     )
 
     as_of = ledger.entries[-1].date

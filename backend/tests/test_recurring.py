@@ -79,7 +79,7 @@ def _series(name: str, periods: list[date], value: float) -> SeriesForecast:
         unit="USD",
         model="naive",
         candidates={"naive": 1.0},
-        metrics=BacktestMetrics(mase=1.0, pinball=1.0, coverage_80=0.8, n_origins=3),
+        metrics=BacktestMetrics(mase=1.0, pinball=1.0, coverage_85=0.85, n_origins=3),
         history=[],
         forecast=[ForecastPoint(period=p, p10=value, p50=value, p90=value) for p in periods],
     )

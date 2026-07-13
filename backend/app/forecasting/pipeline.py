@@ -20,7 +20,7 @@ import pandas as pd
 from app.forecasting import baselines, metrics
 from app.schemas import BacktestMetrics, ForecastPoint, HistoryPoint, SeriesForecast
 
-QUANTILES = (0.1, 0.5, 0.9)
+QUANTILES = (0.075, 0.5, 0.925)  # 85% nominal interval (p7.5–p92.5)
 
 
 def _conformal_level(q: float, n: int) -> float:
@@ -124,12 +124,14 @@ def run_series_forecast(
     calib_q = _residual_quantiles_by_step(calib, horizon)
 
     # Evaluate pinball + coverage on the held-out eval slice.
+    # Keys match QUANTILES = (0.075, 0.5, 0.925) — p7.5 / p50 / p92.5.
+    _q_lo, _q_hi = QUANTILES[0], QUANTILES[2]
     pinballs, lowers, uppers, actuals = [], [], [], []
     for r in eval_:
         q = calib_q[r.step]
-        p10, p50, p90 = r.pred + q[0.1], r.pred + q[0.5], r.pred + q[0.9]
-        lowers.append(p10)
-        uppers.append(p90)
+        p_lo, p50, p_hi = r.pred + q[_q_lo], r.pred + q[0.5], r.pred + q[_q_hi]
+        lowers.append(p_lo)
+        uppers.append(p_hi)
         actuals.append(r.actual)
         pinballs.append(
             np.mean(
@@ -148,9 +150,9 @@ def run_series_forecast(
     forecast_points = [
         ForecastPoint(
             period=future_index[i].date(),
-            p10=round(float(point[i] + final_q[i + 1][0.1]), 2),
+            p10=round(float(point[i] + final_q[i + 1][_q_lo]), 2),
             p50=round(float(point[i] + final_q[i + 1][0.5]), 2),
-            p90=round(float(point[i] + final_q[i + 1][0.9]), 2),
+            p90=round(float(point[i] + final_q[i + 1][_q_hi]), 2),
         )
         for i in range(horizon)
     ]
@@ -164,7 +166,7 @@ def run_series_forecast(
         metrics=BacktestMetrics(
             mase=round(candidate_mase[best_id], 4),
             pinball=round(float(np.mean(pinballs)), 2) if pinballs else float("nan"),
-            coverage_80=round(cov, 3),
+            coverage_85=round(cov, 3),
             n_origins=len(origins_sorted),
         ),
         history=[
@@ -194,7 +196,7 @@ def _short_series_forecast(y, index, name, label, horizon, unit) -> SeriesForeca
         unit=unit,
         model="naive",
         candidates={"naive": float("nan")},
-        metrics=BacktestMetrics(mase=float("nan"), pinball=float("nan"), coverage_80=float("nan"), n_origins=0),
+        metrics=BacktestMetrics(mase=float("nan"), pinball=float("nan"), coverage_85=float("nan"), n_origins=0),
         history=[HistoryPoint(period=index[i].date(), value=round(float(y[i]), 2)) for i in range(len(index))],
         forecast=forecast_points,
     )
