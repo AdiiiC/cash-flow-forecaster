@@ -23,7 +23,7 @@ eval_type_backport==0.2.0
 pyotp==2.9.0
 qrcode[pil]==7.4.2
 # Email
-resend==2.5.0
+resend==2.4.0
 # Scheduling
 apscheduler==3.10.4
 # Email validation in Pydantic
