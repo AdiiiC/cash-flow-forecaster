@@ -83,8 +83,26 @@ export function AuthMenu({ onAuthChange }: Props) {
         Sign in
       </button>
 
-      {open && typeof document !== "undefined" && createPortal(
-        <div className="auth-overlay" role="dialog" aria-modal="true" onClick={closeModal}>
+      {open && typeof window !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(5,7,10,0.72)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: "20px",
+            boxSizing: "border-box",
+          }}
+          role="dialog"
+          aria-modal="true"
+          onClick={closeModal}
+        >
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <div className="auth-tabs">
               <button
