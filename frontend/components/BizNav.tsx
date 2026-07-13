@@ -24,6 +24,7 @@ function Icon({ id, ...props }: { id: string } & SVGProps<SVGSVGElement>) {
     "working-capital":  <><path d="M13 8A5 5 0 1 1 8 3"/><polyline points="13,3 13,8 8,8"/></>,
     actuals:     <><rect x="3" y="3" width="10" height="10" rx="1"/><polyline points="6,8 7.5,9.5 10,7"/></>,
     customers:   <><circle cx="8" cy="6" r="2.5"/><path d="M3,14 c0-2.8 2.2-5 5-5s5,2.2 5,5"/></>,
+    exim:        <><circle cx="8" cy="8" r="5.5"/><line x1="8" y1="2.5" x2="8" y2="13.5"/><path d="M2.5,8 q2.5,3 5.5,3t5.5-3"/><path d="M2.5,8 q2.5-3 5.5-3t5.5,3"/></>,
     budget:      <><line x1="4" y1="5" x2="13" y2="5"/><line x1="8" y1="5" x2="8" y2="13"/><line x1="4" y1="9" x2="12" y2="9"/><line x1="4" y1="13" x2="12" y2="13"/></>,
     team:        <><circle cx="5.5" cy="6" r="2"/><circle cx="10.5" cy="6" r="2"/><path d="M1,14 c0-2.2 2-3.5 4.5-3.5"/><path d="M15,14 c0-2.2-2-3.5-4.5-3.5"/><path d="M6,10.5 c.5-.3 1.2-.5 2-.5s1.5.2 2,.5"/></>,
     security:    <><rect x="4" y="7" width="8" height="7" rx="1"/><path d="M5,7 V5.5 a3,3 0 0,1 6,0 V7"/></>,
@@ -51,9 +52,10 @@ const NAV_SECTIONS = [
   {
     label: "Data",
     items: [
-      { href: "/actuals",   icon: "actuals",   label: "Actuals & Variance" },
-      { href: "/customers", icon: "customers", label: "Customer MRR" },
-      { href: "/budget",    icon: "budget",    label: "Budget" },
+      { href: "/actuals",        icon: "actuals",   label: "Actuals & Variance" },
+      { href: "/actuals/config", icon: "exim",      label: "ExIm & Config" },
+      { href: "/customers",      icon: "customers", label: "Customer MRR" },
+      { href: "/budget",         icon: "budget",    label: "Budget" },
     ],
   },
   {
