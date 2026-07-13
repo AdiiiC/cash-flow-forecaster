@@ -82,7 +82,8 @@ export function SeriesPanel({ series }: { series: SeriesForecast }) {
         </span>
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
+      <div style={{ width: "100%", height: 200 }}>
+      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={rows} margin={{ top: 6, right: 10, bottom: 0, left: 6 }}>
           <XAxis
             dataKey="period"
@@ -124,6 +125,7 @@ export function SeriesPanel({ series }: { series: SeriesForecast }) {
           />
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
 
       <div className="metric-row">
         <div className="metric" title="Accuracy vs a naive baseline. Below 1.0 means it beats 'next week = last week'. Lower is better.">

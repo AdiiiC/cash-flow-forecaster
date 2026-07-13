@@ -87,7 +87,8 @@ export function CategoryWaterfall({
         <h3>Cash bridge by category</h3>
         <span className="badge">projected {horizonWeeks}w flows</span>
       </div>
-      <ResponsiveContainer width="100%" height={260}>
+      <div style={{ width: "100%", height: 260 }}>
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart data={bars} margin={{ top: 8, right: 10, bottom: 0, left: 6 }}>
           <XAxis
             dataKey="name"
@@ -114,6 +115,7 @@ export function CategoryWaterfall({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
       <div className="driver-note">
         Opening balance plus each category&apos;s projected horizon contribution.
         Inflows lift the bar, outflows draw it down, ending at projected cash.

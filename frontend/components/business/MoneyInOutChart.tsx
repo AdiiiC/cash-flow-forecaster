@@ -34,7 +34,8 @@ interface Props {
 
 export function MoneyInOutChart({ data, currency }: Props) {
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <div style={{ width: "100%", height: 280 }}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 12, bottom: 0, left: 8 }} barGap={6}>
         <XAxis
           dataKey="month"
@@ -71,5 +72,6 @@ export function MoneyInOutChart({ data, currency }: Props) {
         />
       </BarChart>
     </ResponsiveContainer>
+    </div>
   );
 }

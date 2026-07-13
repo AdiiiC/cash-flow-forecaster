@@ -2100,10 +2100,10 @@ button:disabled {
   padding: 0 clamp(1.25rem, 4vw, 2.5rem) var(--space-8);
   overflow-x: hidden;
 }
-/* Recharts can leave a stale over-wide legend/container width on resize;
-   cap wrappers so a chart never forces page-level horizontal scroll. */
+/* Recharts 3.x renders the chart inside a 0×0 overflow:visible sentinel div;
+   applying max-width:100% on .recharts-wrapper resolves to 0 and hides the
+   chart. Cap only the outer container and legend wrapper instead. */
 .bz .recharts-responsive-container,
-.bz .recharts-wrapper,
 .bz .recharts-legend-wrapper {
   max-width: 100% !important;
 }

@@ -70,7 +70,8 @@ export function BalanceChart({ data }: { data: ForecastResponse }) {
     data.runway_weeks !== null ? rows[data.runway_weeks]?.period : undefined;
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <div style={{ width: "100%", height: 280 }}>
+    <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 8 }}>
         <XAxis
           dataKey="period"
@@ -110,5 +111,6 @@ export function BalanceChart({ data }: { data: ForecastResponse }) {
         />
       </ComposedChart>
     </ResponsiveContainer>
+    </div>
   );
 }

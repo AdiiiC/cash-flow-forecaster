@@ -283,7 +283,8 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={220}>
+          <div style={{ width: "100%", height: 220 }}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: 8 }}>
               <XAxis
                 dataKey="period"
@@ -339,6 +340,7 @@ export function ScenarioPanel({ input, onChange, onApply, onClear, data, loading
               />
             </LineChart>
           </ResponsiveContainer>
+          </div>
           <div className="driver-note">
             This what-if is a transparent estimate built from the main forecast
             (growth compounded weekly, costs scaled, one-off applied). It is a

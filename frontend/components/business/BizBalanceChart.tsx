@@ -47,7 +47,8 @@ export function BizBalanceChart({ data, currency }: Props) {
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <div style={{ width: "100%", height: 280 }}>
+    <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 8 }}>
         <XAxis
           dataKey="period"
@@ -80,5 +81,6 @@ export function BizBalanceChart({ data, currency }: Props) {
         />
       </ComposedChart>
     </ResponsiveContainer>
+    </div>
   );
 }
