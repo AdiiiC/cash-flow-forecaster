@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     data_encryption_key: str = ""
 
+    # ---- Email (Resend) ---------------------------------------------------
+    # Transactional email for OTP codes, weekly digest, and invite emails.
+    # Sign up free at https://resend.com and add your API key here.
+    resend_api_key: str = ""
+    email_from: str = "ClearCash <noreply@clearcash.app>"
+
+    # ---- TOTP / MFA -------------------------------------------------------
+    totp_issuer: str = "ClearCash"
+
     # Persistence. When set (e.g. a Supabase/Neon Postgres URL) run history is
     # stored there and survives redeploys. When empty, we fall back to a local
     # SQLite file so local dev and tests need no external database.

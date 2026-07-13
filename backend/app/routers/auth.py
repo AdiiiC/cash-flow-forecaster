@@ -1,9 +1,10 @@
-"""Auth endpoints: register, login, current user."""
+"""Auth endpoints: register, login, current user, MFA."""
 from __future__ import annotations
 
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
 from app import store
@@ -34,19 +35,48 @@ def register(body: UserCreate) -> TokenResponse:
     try:
         user = store.create_user(body.email, hash_password(body.password))
     except IntegrityError:
-        # Race: another request created the same email between the check and insert.
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
     token = create_access_token(user["id"])
     store.record_audit("auth.register", user_id=user["id"])
     return TokenResponse(access_token=token, user=_to_public(user))
 
 
-@router.post("/login", response_model=TokenResponse)
-def login(body: UserLogin) -> TokenResponse:
+@router.post("/login")
+def login(body: UserLogin, bg: BackgroundTasks):
+    """
+    Login with email + password.
+    If MFA is enabled returns {mfa_required: true, mfa_token, method} instead of a
+    full access token. The client must then POST to /api/auth/mfa/verify.
+    """
+    from app.otp_helpers import create_mfa_token, generate_email_otp, hash_otp_code
+    from app.notifications.email import send_otp_email
+
     user = store.get_user_by_email(body.email)
     if user is None or not verify_password(body.password, user["password_hash"]):
-        # Same message for both cases so we don't reveal which emails exist.
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
+
+    mfa = store.get_user_mfa(user["id"]) or {}
+    totp_on  = bool(mfa.get("totp_enabled"))
+    email_on = bool(mfa.get("email_otp_enabled"))
+
+    if totp_on or email_on:
+        mfa_token = create_mfa_token(user["id"])
+        method    = "totp" if totp_on else "email_otp"
+        if email_on and not totp_on:
+            # Generate and email the OTP in the background
+            code = generate_email_otp()
+            code_hash = hash_otp_code(code)
+            expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+            store.save_otp_code(
+                id=uuid.uuid4().hex[:12],
+                user_id=user["id"],
+                code_hash=code_hash,
+                expires_at=expires,
+            )
+            bg.add_task(send_otp_email, user["email"], code)
+        store.record_audit("auth.login.mfa_required", user_id=user["id"])
+        return {"mfa_required": True, "mfa_token": mfa_token, "method": method}
+
     token = create_access_token(user["id"])
     store.record_audit("auth.login", user_id=user["id"])
     return TokenResponse(access_token=token, user=_to_public(user))

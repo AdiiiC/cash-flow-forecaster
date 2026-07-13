@@ -11,6 +11,16 @@ from fastapi.responses import JSONResponse
 from app.config import get_settings
 from app.routers import auth, forecast, invoices, recurring, scenarios
 from app.routers.exim import router as exim_router
+from app.routers.mfa import router as mfa_router
+from app.routers.org import router as org_router
+from app.routers.cashflow_actuals import router as actuals_router_v2
+from app.routers.budget import router as budget_router
+from app.routers.customers_mrr import router as customers_mrr_router
+from app.routers.webhooks_config import router as webhooks_config_router
+from app.routers.accounts import router as accounts_router
+from app.routers.stress import router as stress_router
+from app.routers.scheduled_forecasts import router as scheduled_router
+from app.routers.notification_prefs import router as notif_prefs_router
 from app.actuals.router import router as actuals_router
 from app.store import init_db
 
@@ -61,11 +71,21 @@ async def rate_limit(request: Request, call_next):
 
 app.include_router(forecast.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(mfa_router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(recurring.router, prefix="/api")
 app.include_router(invoices.router, prefix="/api")
 app.include_router(exim_router, prefix="/api")
 app.include_router(actuals_router, prefix="/api")
+app.include_router(org_router, prefix="/api")
+app.include_router(actuals_router_v2, prefix="/api")
+app.include_router(budget_router, prefix="/api")
+app.include_router(customers_mrr_router, prefix="/api")
+app.include_router(webhooks_config_router, prefix="/api")
+app.include_router(accounts_router, prefix="/api")
+app.include_router(stress_router, prefix="/api")
+app.include_router(scheduled_router, prefix="/api")
+app.include_router(notif_prefs_router, prefix="/api")
 
 
 @app.on_event("startup")

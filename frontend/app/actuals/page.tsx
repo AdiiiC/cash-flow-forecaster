@@ -1,186 +1,145 @@
 "use client";
+import { useEffect, useState } from "react";
 
-import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 
-import { ApiError } from "@/lib/api";
-import { formatGeneratedAt } from "@/lib/format";
-import {
-  DeterministicProjection,
-  fetchDemoProjection,
-} from "@/lib/actualsApi";
-import { AuthMenu } from "@/components/AuthMenu";
-import { ActualsKpis } from "@/components/actuals/ActualsKpis";
-import { ActualsBalanceChart } from "@/components/actuals/ActualsBalanceChart";
-import { ActualsCashFlowChart } from "@/components/actuals/ActualsCashFlowChart";
-import { ActualsBreakdown } from "@/components/actuals/ActualsBreakdown";
-import {
-  ActualsInputPanel,
-  type ActualsParams,
-} from "@/components/actuals/ActualsInputPanel";
-
-const DEFAULT_PARAMS: ActualsParams = {
-  opening_balance: 20_000_000,
-  currency: "INR",
-  horizon_weeks: 13,
-  granularity: "daily",
-};
-
-type Status = "loading" | "ready" | "error";
+interface Variance { week_start: string; actual_net: number; forecast_p50: number | null;
+                     variance: number | null; variance_pct: number | null; status: string; }
 
 export default function ActualsPage() {
-  const [data, setData] = useState<DeterministicProjection | null>(null);
-  const [status, setStatus] = useState<Status>("loading");
-  const [error, setError] = useState("");
-  const [slowHint, setSlowHint] = useState(false);
-  const [runParams, setRunParams] = useState<ActualsParams>(DEFAULT_PARAMS);
+  const [token, setToken] = useState<string | null>(null);
+  const [actuals, setActuals] = useState<any[]>([]);
+  const [variance, setVariance] = useState<{ variance: Variance[]; cumulative_variance_pct?: number; reforecast_recommended?: boolean } | null>(null);
+  const [form, setForm] = useState({ week_start: "", category: "", direction: "outflow", amount: "" });
+  const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState("");
+  const [tab, setTab] = useState<"entries" | "variance">("variance");
 
-  const runProjection = useCallback((p: ActualsParams) => {
-    setRunParams(p);
-    setData(null);
-    setStatus("loading");
-    setSlowHint(false);
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      if (!cancelled) setSlowHint(true);
-    }, 4000);
-
-    fetchDemoProjection(p)
-      .then((res) => {
-        if (!cancelled) {
-          setData(res);
-          setStatus("ready");
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setError(
-            e instanceof ApiError
-              ? e.message
-              : "Backend unreachable. Is the API running?",
-          );
-          setStatus("error");
-        }
-      })
-      .finally(() => clearTimeout(timer));
-
-    return () => { cancelled = true; clearTimeout(timer); };
+  useEffect(() => {
+    const t = localStorage.getItem("cff.token");
+    setToken(t); if (t) loadAll(t);
   }, []);
 
-  const didMount = useRef(false);
-  useEffect(() => {
-    if (didMount.current) return;
-    didMount.current = true;
-    runProjection(DEFAULT_PARAMS);
-  }, [runProjection]);
+  async function loadAll(t: string) {
+    const [aRes, vRes] = await Promise.all([
+      fetch(`${API}/api/cashflow-actuals`, { headers: authH(t) }),
+      fetch(`${API}/api/cashflow-actuals/variance`, { headers: authH(t) }),
+    ]);
+    if (aRes.ok) setActuals(await aRes.json());
+    if (vRes.ok) setVariance(await vRes.json());
+  }
+
+  async function addEntry(e: React.FormEvent) {
+    e.preventDefault(); if (!token) return;
+    setLoading(true);
+    const res = await fetch(`${API}/api/cashflow-actuals`, {
+      method: "POST", headers: authH(token),
+      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
+    });
+    if (res.ok) { setInfo("Entry saved."); setForm({ week_start: "", category: "", direction: "outflow", amount: "" }); loadAll(token); }
+    setLoading(false);
+  }
+
+  async function uploadCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file || !token) return;
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch(`${API}/api/cashflow-actuals/upload`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
+    });
+    const d = await res.json();
+    if (res.ok) { setInfo(`Imported ${d.rows_imported} rows.`); loadAll(token); }
+  }
+
+  const statusColor: Record<string,string> = { on_track:"var(--pos)", warning:"var(--amber,#f59e0b)", off_track:"var(--neg)" };
 
   return (
-    <div className="bz">
-      <header className="bz-header">
-        <div className="bz-header-brand">
-          <Link href="/" className="lp-brand">
-            <span className="lp-brand-mark bz-mark">CF</span>
-            <span className="lp-brand-name">Cash-Flow Forecaster</span>
-          </Link>
-          {data && (
-            <p className="bz-header-meta">
-              Actuals projection · {data.periods.length} {data.granularity === "daily" ? "days" : "weeks"} · {formatGeneratedAt(data.generated_at)}
-            </p>
+    <div className="bz-page">
+      <h1 className="bz-page-title">Actuals vs. Forecast</h1>
+      <p className="bz-page-sub">
+        Record what actually happened each week and compare it to your forecast.
+        When cumulative variance exceeds 15%, consider re-running your forecast.
+      </p>
+
+      <div className="bz-tab-bar">
+        <button className={`bz-tab${tab==="variance"?" bz-tab--active":""}`} onClick={()=>setTab("variance")}>Variance Analysis</button>
+        <button className={`bz-tab${tab==="entries"?" bz-tab--active":""}`} onClick={()=>setTab("entries")}>All Entries</button>
+      </div>
+
+      {tab === "variance" && variance && (
+        <>
+          {variance.reforecast_recommended && (
+            <div className="bz-alert bz-alert--warning">
+              ⚠️ Cumulative variance is {variance.cumulative_variance_pct}% — consider re-running your forecast.
+            </div>
           )}
-        </div>
-        <nav className="bz-header-nav">
-          <Link href="/actuals/config">Setup</Link>
-          <Link href="/dashboard">Executive view</Link>
-          <AuthMenu onAuthChange={() => undefined} />
-        </nav>
-      </header>
-
-      <main className="bz-main">
-        <div className="bz-title">
-          <h1>Cash-flow from actuals</h1>
-          <p>
-            Deterministic projection based on real sales, purchases, expenses, and
-            credit terms — no ML, no guessing.
-          </p>
-        </div>
-
-        <ActualsInputPanel
-          params={runParams}
-          onRun={runProjection}
-          loading={status === "loading"}
-        />
-
-        {status === "loading" && (
-          <div className="bz-state">
-            Loading actuals projection…
-            {slowHint && (
-              <p className="bz-state-hint">
-                Waking the server — the first load after a quiet spell can take up
-                to a minute. Thanks for your patience.
-              </p>
-            )}
-          </div>
-        )}
-
-        {status === "error" && (
-          <div className="bz-state bz-state-error">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {status === "ready" && data && (
-          <>
-
-            <ActualsKpis data={data} />
-
-            <div className="bz-row bz-row-wide">
-              <section className="bz-panel bz-panel-chart">
-                <div className="bz-panel-head">
-                  <div>
-                    <h2>Projected balance</h2>
-                    <p>{data.granularity === "daily" ? "Daily" : "Weekly"} closing balance rolled forward from opening cash</p>
-                  </div>
-                </div>
-                <ActualsBalanceChart periods={data.periods} currency={data.currency} />
-              </section>
-
-              <section className="bz-panel">
-                <div className="bz-panel-head">
-                  <div>
-                    <h2>Source breakdown</h2>
-                    <p>Where money is coming from and going to</p>
-                  </div>
-                </div>
-                <ActualsBreakdown
-                  inflows={data.inflow_summary}
-                  outflows={data.outflow_summary}
-                  currency={data.currency}
-                />
-              </section>
+          {variance.cumulative_variance_pct !== undefined && (
+            <div className="bz-kpi-row">
+              <div className="bz-kpi-mini">
+                <span className="bz-kpi-label">Avg. Variance</span>
+                <span className="bz-kpi-value">{variance.cumulative_variance_pct}%</span>
+              </div>
             </div>
+          )}
+          <table className="bz-table">
+            <thead><tr>
+              <th>Week</th><th>Actual Net</th><th>Forecast P50</th>
+              <th>Variance</th><th>Variance %</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              {variance.variance.map(r => (
+                <tr key={r.week_start}>
+                  <td>{r.week_start}</td>
+                  <td style={{color: r.actual_net>=0?"var(--pos)":"var(--neg)"}}>
+                    {r.actual_net?.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0})}
+                  </td>
+                  <td>{r.forecast_p50 != null ? r.forecast_p50.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}) : "—"}</td>
+                  <td style={{color: (r.variance??0)>=0?"var(--pos)":"var(--neg)"}}>
+                    {r.variance != null ? `${r.variance>=0?"+":""}${r.variance.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0})}` : "—"}
+                  </td>
+                  <td>{r.variance_pct != null ? `${r.variance_pct}%` : "—"}</td>
+                  <td><span style={{color: statusColor[r.status]||"inherit"}}>{r.status.replace("_"," ")}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
 
-            <div className="bz-row bz-row-wide">
-              <section className="bz-panel bz-panel-chart">
-                <div className="bz-panel-head">
-                  <div>
-                    <h2>{data.granularity === "daily" ? "Daily" : "Weekly"} cash flow</h2>
-                    <p>Inflows vs outflows each {data.granularity === "daily" ? "day" : "week"}</p>
-                  </div>
-                </div>
-                <ActualsCashFlowChart periods={data.periods} currency={data.currency} />
-              </section>
-            </div>
-          </>
-        )}
-      </main>
-
-      <footer className="bz-footer">
-        <Link href="/">Home</Link>
-        <span className="dot-sep">·</span>
-        <Link href="/dashboard">Dashboard</Link>
-        <span className="dot-sep">·</span>
-        <Link href="/privacy">Data &amp; security</Link>
-      </footer>
+      {tab === "entries" && (
+        <>
+          <div className="bz-upload-row">
+            <label className="bz-btn bz-btn--ghost bz-btn--sm" style={{cursor:"pointer"}}>
+              ⬆ Import CSV
+              <input type="file" accept=".csv" hidden onChange={uploadCSV} />
+            </label>
+            <span className="bz-hint">CSV columns: date, category, direction, amount</span>
+          </div>
+          {info && <p className="bz-info">{info}</p>}
+          <form onSubmit={addEntry} className="bz-form bz-form--row" style={{marginBottom:"20px"}}>
+            <input className="bz-input" type="date" value={form.week_start} onChange={e=>setForm(f=>({...f,week_start:e.target.value}))} required />
+            <input className="bz-input" placeholder="Category" value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} required />
+            <select className="bz-select" value={form.direction} onChange={e=>setForm(f=>({...f,direction:e.target.value}))}>
+              <option value="inflow">Inflow</option>
+              <option value="outflow">Outflow</option>
+            </select>
+            <input className="bz-input" type="number" placeholder="Amount" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} min="0.01" step="0.01" required />
+            <button className="bz-btn bz-btn--primary" type="submit" disabled={loading}>Add</button>
+          </form>
+          <table className="bz-table">
+            <thead><tr><th>Week</th><th>Category</th><th>Direction</th><th>Amount</th><th>Source</th></tr></thead>
+            <tbody>
+              {actuals.map((a:any) => (
+                <tr key={a.id}>
+                  <td>{a.week_start}</td><td>{a.category}</td>
+                  <td style={{color:a.direction==="inflow"?"var(--pos)":"var(--neg)"}}>{a.direction}</td>
+                  <td>{a.amount?.toLocaleString()}</td><td>{a.source}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }
