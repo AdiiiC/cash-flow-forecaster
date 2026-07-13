@@ -28,7 +28,7 @@ async function tokenFor(secret: string): Promise<string> {
     .join("");
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const secret = process.env.DEV_ACCESS_KEY;
   const { pathname, searchParams } = req.nextUrl;
 
