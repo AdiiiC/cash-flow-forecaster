@@ -4,10 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
  * Dev-only access gate.
  *
  * Routes behind the key:
- *   /forecast      — raw probabilistic engine (model internals, calibration, Greeks)
- *   /dev           — debug panel (health, runs, webhooks, seed data, email test)
- *   /docs          — redirects to FastAPI Swagger (backend API docs)
- *   /actuals/config — technical setup (customers/suppliers/GST/ExIm); not for demo visitors
+ *   /forecast — raw probabilistic engine (model internals, calibration, Greeks)
+ *   /dev      — debug panel (health, runs, webhooks, seed data, email test)
+ *   /docs     — redirects to FastAPI Swagger (backend API docs)
  *
  * End users without the key see /dashboard only.
  * The key is set server-side (no NEXT_PUBLIC_ prefix) so it never reaches the client.
@@ -26,7 +25,6 @@ const GATED_PATHS = [
   "/forecast",
   "/dev",
   "/docs",
-  "/actuals/config",
 ];
 
 function isGated(pathname: string): boolean {
@@ -96,8 +94,6 @@ export const config = {
     "/dev",
     "/dev/:path*",
     "/docs",
-    "/actuals/config",
-    "/actuals/config/:path*",
     "/unlock",
   ],
 };
