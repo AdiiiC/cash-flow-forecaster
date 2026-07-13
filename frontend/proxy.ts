@@ -3,22 +3,37 @@ import { NextRequest, NextResponse } from "next/server";
 /*
  * Dev-only access gate.
  *
- * The technical forecaster ("/forecast") is not meant for end users. This
- * middleware runs on the server (Edge) so the secret never reaches the client
- * bundle. End users who hit "/forecast" without a valid dev cookie are quietly
- * redirected to the executive dashboard.
+ * Routes behind the key:
+ *   /forecast      — raw probabilistic engine (model internals, calibration, Greeks)
+ *   /dev           — debug panel (health, runs, webhooks, seed data, email test)
+ *   /docs          — redirects to FastAPI Swagger (backend API docs)
+ *   /actuals/config — technical setup (customers/suppliers/GST/ExIm); not for demo visitors
  *
- * Unlock (two ways, both land here):
- *   1. Secret URL:        /unlock?key=<DEV_ACCESS_KEY>
- *   2. Keyboard shortcut: Ctrl+Alt+D on any page prompts for the key, which
- *                         then navigates to the same /unlock endpoint.
+ * End users without the key see /dashboard only.
+ * The key is set server-side (no NEXT_PUBLIC_ prefix) so it never reaches the client.
  *
- * The cookie stores a SHA-256 token derived from the secret (never the raw
- * secret), is httpOnly (invisible to page JS), and expires after 12 hours.
+ * Unlock two ways:
+ *   1. Secret URL:  /unlock?key=<DEV_ACCESS_KEY>  → sets cookie, redirects to /dev
+ *   2. Keyboard:    Ctrl+Alt+D (any page) → prompts for key → /unlock endpoint
+ *
+ * Cookie: SHA-256 of the secret, httpOnly, 12-hour expiry.
  */
 
 const COOKIE_NAME = "cf_dev_access";
 const SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours
+
+const GATED_PATHS = [
+  "/forecast",
+  "/dev",
+  "/docs",
+  "/actuals/config",
+];
+
+function isGated(pathname: string): boolean {
+  return GATED_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "#")
+  );
+}
 
 async function tokenFor(secret: string): Promise<string> {
   const data = new TextEncoder().encode(`cash-flow-dev::${secret}`);
@@ -39,15 +54,14 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(dest);
   };
 
-  // --- Unlock endpoint -----------------------------------------------------
+  // --- Unlock endpoint -------------------------------------------------------
   if (pathname === "/unlock") {
-    // Not configured → behave as if the endpoint doesn't exist.
     if (!secret) return toDashboard();
-
     const key = searchParams.get("key") ?? "";
     if (key && key === secret) {
+      // After unlocking, land on /dev (the debug panel) rather than /forecast
       const dest = req.nextUrl.clone();
-      dest.pathname = "/forecast";
+      dest.pathname = "/dev";
       dest.search = "";
       const res = NextResponse.redirect(dest);
       res.cookies.set(COOKIE_NAME, await tokenFor(secret), {
@@ -59,12 +73,11 @@ export async function proxy(req: NextRequest) {
       });
       return res;
     }
-    // Wrong/empty key → no error leak, just bounce.
     return toDashboard();
   }
 
-  // --- Gated technical view ------------------------------------------------
-  if (pathname === "/forecast" || pathname.startsWith("/forecast/")) {
+  // --- Gated routes ---------------------------------------------------------
+  if (isGated(pathname)) {
     if (!secret) return toDashboard();
     const cookie = req.cookies.get(COOKIE_NAME)?.value;
     if (cookie && cookie === (await tokenFor(secret))) {
@@ -77,5 +90,14 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/forecast", "/forecast/:path*", "/unlock"],
+  matcher: [
+    "/forecast",
+    "/forecast/:path*",
+    "/dev",
+    "/dev/:path*",
+    "/docs",
+    "/actuals/config",
+    "/actuals/config/:path*",
+    "/unlock",
+  ],
 };
