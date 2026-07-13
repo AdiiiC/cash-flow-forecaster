@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, CartesianGrid } from "recharts";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
