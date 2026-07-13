@@ -26,8 +26,7 @@
   --band: rgba(47, 184, 160, 0.14); /* prediction interval fill */
 
   /* Type scale */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  --font-sans: ui-sans-serif, -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "SFMono-Regular", "JetBrains Mono", "IBM Plex Mono", ui-monospace,
     "Menlo", "Consolas", monospace;
 
@@ -50,7 +49,7 @@
   /* Accent + semantic tints */
   --accent-soft: rgba(224, 163, 74, 0.12);
   --accent-line: rgba(224, 163, 74, 0.3);
-  --accent-grad: linear-gradient(180deg, #edb35f, #d8973c);
+  --accent-grad: var(--accent);
   --pos-soft: rgba(47, 184, 160, 0.12);
   --pos-line: rgba(47, 184, 160, 0.38);
   --neg-soft: rgba(224, 100, 79, 0.12);
@@ -765,7 +764,7 @@ button:disabled {
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--pos), var(--accent));
+  background: var(--pos);
   border-radius: 999px;
   transition: width 0.35s ease;
 }
@@ -1790,9 +1789,8 @@ button:disabled {
   gap: var(--space-4);
   padding: var(--space-4) 0;
   margin-bottom: var(--space-2);
-  border-bottom: 1px solid var(--hairline);
-  background: color-mix(in srgb, var(--ink-900) 78%, transparent);
-  backdrop-filter: saturate(140%) blur(12px);
+  border-bottom: 1px solid var(--hairline-strong);
+  background: var(--ink-900);
 }
 .lp-brand {
   display: inline-flex;
@@ -1855,25 +1853,9 @@ button:disabled {
   text-align: center;
   overflow: hidden;
 }
-.lp-hero::before {
-  content: "";
-  position: absolute;
-  inset: -30% 0 auto 0;
-  height: 130%;
-  background: radial-gradient(60% 45% at 50% 0%, var(--accent-soft), transparent 70%);
-  pointer-events: none;
-}
+.lp-hero::before,
 .lp-hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(var(--hairline) 1px, transparent 1px),
-    linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
-  background-size: 3.5rem 3.5rem;
-  -webkit-mask-image: radial-gradient(70% 55% at 50% 35%, #000 20%, transparent 75%);
-  mask-image: radial-gradient(70% 55% at 50% 35%, #000 20%, transparent 75%);
-  opacity: 0.5;
-  pointer-events: none;
+  display: none;
 }
 .lp-hero-inner {
   position: relative;
@@ -1903,10 +1885,7 @@ button:disabled {
   margin: 0 0 var(--space-5);
 }
 .lp-accent {
-  background: linear-gradient(180deg, var(--accent), #caa15e);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--accent);
 }
 .lp-hero-sub {
   font-size: var(--fs-lg);
@@ -2041,8 +2020,7 @@ button:disabled {
 .lp-cta {
   position: relative;
   text-align: center;
-  background: radial-gradient(80% 120% at 50% 0%, var(--accent-soft), transparent 60%),
-    var(--surface-2);
+  background: var(--surface-2);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-xl);
   padding: var(--space-9) var(--space-6);
@@ -2144,7 +2122,6 @@ button:disabled {
   border-bottom: 1px solid var(--hairline);
   margin-bottom: var(--space-7);
   background: color-mix(in srgb, var(--ink-900) 78%, transparent);
-  backdrop-filter: saturate(140%) blur(12px);
 }
 .bz-mark {
   font-family: var(--font-mono);
@@ -2332,7 +2309,6 @@ button:disabled {
   padding: var(--space-3) var(--space-4);
   font-size: var(--fs-sm);
   box-shadow: var(--shadow-md);
-  backdrop-filter: blur(8px);
 }
 .bz-tooltip-title {
   color: var(--text-faint);
@@ -3030,7 +3006,6 @@ button:disabled {
    ══════════════════════════════════════════════════════════════════════════════ */
 .otp-overlay, .totp-overlay {
   position: fixed; inset: 0; z-index: 900;
-  background: rgba(10,10,14,.72); backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center; padding: 16px;
 }
 .otp-card, .totp-card {
