@@ -1365,3 +1365,342 @@ def upsert_notification_prefs(user_id: str, email_digest_enabled: int,
                 slack_enabled=slack_enabled, webhook_enabled=webhook_enabled,
                 updated_at=updated_at,
             ))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# B2B Business Intelligence tables — Wave 2
+# ══════════════════════════════════════════════════════════════════════════════
+
+_employees = Table(
+    "employees", _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("name", Text, nullable=False),
+    Column("department", String(60), nullable=False),
+    Column("annual_salary", Float, nullable=False),
+    Column("hire_date", String(20), nullable=False),
+    Column("departure_date", String(20), nullable=True),
+    Column("status", String(16), nullable=False, default="active"),
+    Column("created_at", String(40), nullable=False),
+)
+
+_headcount_plan = Table(
+    "headcount_plan", _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("department", String(60), nullable=False),
+    Column("role", String(120), nullable=False),
+    Column("annual_salary", Float, nullable=False),
+    Column("planned_start_date", String(20), nullable=False),
+    Column("type", String(16), nullable=False, default="hire"),
+    Column("status", String(32), nullable=False, default="planned"),
+    Column("created_at", String(40), nullable=False),
+)
+
+_cost_structure = Table(
+    "cost_structure", _metadata,
+    Column("user_id", String(32), primary_key=True),
+    Column("fixed_costs_weekly", Float, nullable=False, default=0),
+    Column("variable_cost_pct", Float, nullable=False, default=0),
+    Column("gross_margin_pct", Float, nullable=False, default=0.70),
+    Column("cac", Float, nullable=True),
+    Column("updated_at", String(40), nullable=False),
+)
+
+_bookings = Table(
+    "bookings", _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("customer_name", Text, nullable=False),
+    Column("booking_date", String(20), nullable=False),
+    Column("contract_value", Float, nullable=False),
+    Column("term_months", Integer, nullable=False, default=12),
+    Column("start_date", String(20), nullable=False),
+    Column("status", String(32), nullable=False, default="active"),
+    Column("created_at", String(40), nullable=False),
+)
+
+_capex_items = Table(
+    "capex_items", _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("name", String(200), nullable=False),
+    Column("amount", Float, nullable=False),
+    Column("purchase_date", String(20), nullable=False),
+    Column("useful_life_years", Float, nullable=False, default=3.0),
+    Column("category", String(60), nullable=False, default="equipment"),
+    Column("status", String(32), nullable=False, default="active"),
+    Column("created_at", String(40), nullable=False),
+)
+
+_tax_config = Table(
+    "tax_config", _metadata,
+    Column("user_id", String(32), primary_key=True),
+    Column("entity_type", String(60), nullable=False, default="corporation"),
+    Column("effective_tax_rate_pct", Float, nullable=False, default=21.0),
+    Column("jurisdiction", String(60), nullable=False, default="US"),
+    Column("quarterly_months", Text, nullable=False, default="[4,6,9,1]"),
+    Column("prior_year_tax", Float, nullable=True),
+    Column("updated_at", String(40), nullable=False),
+)
+
+_financing_events = Table(
+    "financing_events", _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("user_id", String(32), nullable=False),
+    Column("type", String(32), nullable=False),
+    Column("label", String(200), nullable=False),
+    Column("expected_amount", Float, nullable=False),
+    Column("probability_pct", Float, nullable=False, default=100),
+    Column("expected_date", String(20), nullable=False),
+    Column("status", String(32), nullable=False, default="planned"),
+    Column("notes", Text, nullable=True),
+    Column("created_at", String(40), nullable=False),
+)
+
+_cash_policy = Table(
+    "cash_policy", _metadata,
+    Column("user_id", String(32), primary_key=True),
+    Column("target_reserve_months", Float, nullable=False, default=6),
+    Column("min_balance_absolute", Float, nullable=True),
+    Column("review_cadence", String(32), nullable=False, default="monthly"),
+    Column("updated_at", String(40), nullable=False),
+)
+
+# ── Store helpers — Wave 2 ─────────────────────────────────────────────────────
+
+def get_all_invoices_for_user(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(select(_invoices).where(_invoices.c.user_id == user_id)))
+
+
+def list_recurring_items_for_user(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(select(_recurring).where(_recurring.c.user_id == user_id)))
+
+
+# Employees
+def save_employee(id, user_id, name, department, annual_salary, hire_date,
+                   departure_date, status, created_at):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(insert(_employees).values(
+            id=id, user_id=user_id, name=name, department=department,
+            annual_salary=annual_salary, hire_date=hire_date,
+            departure_date=departure_date, status=status, created_at=created_at))
+
+
+def list_employees(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(
+            select(_employees).where(_employees.c.user_id == user_id)
+            .order_by(_employees.c.hire_date)))
+
+
+def update_employee(emp_id, user_id, **fields):
+    _ensure()
+    from sqlalchemy import update
+    with _engine().begin() as conn:
+        conn.execute(update(_employees).where(
+            (_employees.c.id == emp_id) & (_employees.c.user_id == user_id)).values(**fields))
+
+
+def delete_employee(emp_id: str, user_id: str):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(delete(_employees).where(
+            (_employees.c.id == emp_id) & (_employees.c.user_id == user_id)))
+
+
+# Headcount plan
+def save_headcount_plan(id, user_id, department, role, annual_salary,
+                         planned_start_date, type, created_at):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(insert(_headcount_plan).values(
+            id=id, user_id=user_id, department=department, role=role,
+            annual_salary=annual_salary, planned_start_date=planned_start_date,
+            type=type, status="planned", created_at=created_at))
+
+
+def list_headcount_plan(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(
+            select(_headcount_plan).where(_headcount_plan.c.user_id == user_id)
+            .order_by(_headcount_plan.c.planned_start_date)))
+
+
+def delete_headcount_plan(plan_id: str, user_id: str):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(delete(_headcount_plan).where(
+            (_headcount_plan.c.id == plan_id) & (_headcount_plan.c.user_id == user_id)))
+
+
+# Cost structure
+def upsert_cost_structure(user_id, fixed_costs_weekly, variable_cost_pct,
+                            gross_margin_pct, cac, updated_at):
+    _ensure()
+    existing = get_cost_structure(user_id)
+    with _engine().begin() as conn:
+        if existing:
+            from sqlalchemy import update
+            conn.execute(update(_cost_structure).where(
+                _cost_structure.c.user_id == user_id).values(
+                fixed_costs_weekly=fixed_costs_weekly,
+                variable_cost_pct=variable_cost_pct,
+                gross_margin_pct=gross_margin_pct,
+                cac=cac, updated_at=updated_at))
+        else:
+            conn.execute(insert(_cost_structure).values(
+                user_id=user_id, fixed_costs_weekly=fixed_costs_weekly,
+                variable_cost_pct=variable_cost_pct, gross_margin_pct=gross_margin_pct,
+                cac=cac, updated_at=updated_at))
+
+
+def get_cost_structure(user_id: str) -> dict | None:
+    _ensure()
+    with _engine().connect() as conn:
+        return _row(conn.execute(select(_cost_structure).where(
+            _cost_structure.c.user_id == user_id)))
+
+
+# Bookings
+def save_booking(id, user_id, customer_name, booking_date, contract_value,
+                  term_months, start_date, status, created_at):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(insert(_bookings).values(
+            id=id, user_id=user_id, customer_name=customer_name,
+            booking_date=booking_date, contract_value=contract_value,
+            term_months=term_months, start_date=start_date,
+            status=status, created_at=created_at))
+
+
+def list_bookings(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(
+            select(_bookings).where(_bookings.c.user_id == user_id)
+            .order_by(_bookings.c.booking_date.desc())))
+
+
+def delete_booking(booking_id: str, user_id: str):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(delete(_bookings).where(
+            (_bookings.c.id == booking_id) & (_bookings.c.user_id == user_id)))
+
+
+# CapEx
+def save_capex_item(id, user_id, name, amount, purchase_date,
+                     useful_life_years, category, created_at):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(insert(_capex_items).values(
+            id=id, user_id=user_id, name=name, amount=amount,
+            purchase_date=purchase_date, useful_life_years=useful_life_years,
+            category=category, status="active", created_at=created_at))
+
+
+def list_capex_items(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(
+            select(_capex_items).where(_capex_items.c.user_id == user_id)
+            .order_by(_capex_items.c.purchase_date)))
+
+
+def delete_capex_item(item_id: str, user_id: str):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(delete(_capex_items).where(
+            (_capex_items.c.id == item_id) & (_capex_items.c.user_id == user_id)))
+
+
+# Tax config
+def upsert_tax_config(user_id, entity_type, effective_tax_rate_pct,
+                       jurisdiction, quarterly_months, prior_year_tax, updated_at):
+    _ensure()
+    existing = get_tax_config(user_id)
+    with _engine().begin() as conn:
+        if existing:
+            from sqlalchemy import update
+            conn.execute(update(_tax_config).where(
+                _tax_config.c.user_id == user_id).values(
+                entity_type=entity_type,
+                effective_tax_rate_pct=effective_tax_rate_pct,
+                jurisdiction=jurisdiction,
+                quarterly_months=quarterly_months,
+                prior_year_tax=prior_year_tax,
+                updated_at=updated_at))
+        else:
+            conn.execute(insert(_tax_config).values(
+                user_id=user_id, entity_type=entity_type,
+                effective_tax_rate_pct=effective_tax_rate_pct,
+                jurisdiction=jurisdiction, quarterly_months=quarterly_months,
+                prior_year_tax=prior_year_tax, updated_at=updated_at))
+
+
+def get_tax_config(user_id: str) -> dict | None:
+    _ensure()
+    with _engine().connect() as conn:
+        return _row(conn.execute(select(_tax_config).where(
+            _tax_config.c.user_id == user_id)))
+
+
+# Financing events
+def save_financing_event(id, user_id, type, label, expected_amount,
+                          probability_pct, expected_date, status, notes, created_at):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(insert(_financing_events).values(
+            id=id, user_id=user_id, type=type, label=label,
+            expected_amount=expected_amount, probability_pct=probability_pct,
+            expected_date=expected_date, status=status, notes=notes,
+            created_at=created_at))
+
+
+def list_financing_events(user_id: str) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(
+            select(_financing_events).where(_financing_events.c.user_id == user_id)
+            .order_by(_financing_events.c.expected_date)))
+
+
+def delete_financing_event(event_id: str, user_id: str):
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(delete(_financing_events).where(
+            (_financing_events.c.id == event_id) & (_financing_events.c.user_id == user_id)))
+
+
+# Cash policy
+def upsert_cash_policy(user_id, target_reserve_months, min_balance_absolute,
+                        review_cadence, updated_at):
+    _ensure()
+    existing = get_cash_policy(user_id)
+    with _engine().begin() as conn:
+        if existing:
+            from sqlalchemy import update
+            conn.execute(update(_cash_policy).where(
+                _cash_policy.c.user_id == user_id).values(
+                target_reserve_months=target_reserve_months,
+                min_balance_absolute=min_balance_absolute,
+                review_cadence=review_cadence, updated_at=updated_at))
+        else:
+            conn.execute(insert(_cash_policy).values(
+                user_id=user_id, target_reserve_months=target_reserve_months,
+                min_balance_absolute=min_balance_absolute,
+                review_cadence=review_cadence, updated_at=updated_at))
+
+
+def get_cash_policy(user_id: str) -> dict | None:
+    _ensure()
+    with _engine().connect() as conn:
+        return _row(conn.execute(select(_cash_policy).where(
+            _cash_policy.c.user_id == user_id)))

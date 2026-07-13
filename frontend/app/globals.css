@@ -3183,3 +3183,51 @@ button:disabled {
 .bz-event-check { display: flex; align-items: center; gap: 8px; font-size: .82rem;
   color: var(--ink-2,#ccc); cursor: pointer; }
 .bz-event-check input { cursor: pointer; accent-color: var(--accent,#f59e0b); }
+
+/* ── Financial Health / Liquidity Score ──────────────────────────────────── */
+.bz-score-ring-wrap { display:flex; justify-content:center; margin:32px 0 8px; }
+.bz-score-ring {
+  width:160px; height:160px; border-radius:50%;
+  border:8px solid; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+}
+.bz-score-number { font-size:2.8rem; font-weight:900; font-variant-numeric:tabular-nums; }
+.bz-score-label  { font-size:.85rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3,#888); }
+.bz-peer-bench   { text-align:center; font-size:.83rem; color:var(--ink-3,#888); margin:0 auto 24px; max-width:480px; }
+.bz-kpi-sub      { font-size:.75rem; color:var(--ink-3,#888); margin-top:2px; }
+.bz-health-badge { font-size:.9rem; font-weight:700; letter-spacing:.05em; }
+
+/* ── Ratio grid ───────────────────────────────────────────────────────────── */
+.bz-ratio-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;
+}
+.bz-ratio-card {
+  background:var(--surface-2,#1e2130); border:1px solid var(--hairline,#262730);
+  border-radius:10px; padding:16px; text-align:center;
+}
+.bz-ratio-value { font-size:1.5rem; font-weight:800; font-variant-numeric:tabular-nums; }
+.bz-ratio-label { font-size:.78rem; color:var(--ink-3,#888); margin-top:4px; text-transform:uppercase; letter-spacing:.05em; }
+.bz-ratio-bench { font-size:.72rem; color:var(--ink-3,#888); margin-top:4px; }
+
+/* ── Break-even ──────────────────────────────────────────────────────────── */
+.bz-be-result   { margin-top:20px; }
+.bz-be-status   { margin-top:16px; padding:12px 20px; border-radius:8px; font-weight:700; font-size:.95rem; }
+.bz-be-status--positive { background:rgba(16,185,129,.1); color:var(--pos); border:1px solid rgba(16,185,129,.2); }
+.bz-be-status--negative { background:rgba(239,68,68,.1);  color:var(--neg); border:1px solid rgba(239,68,68,.2); }
+
+/* ── Board report ────────────────────────────────────────────────────────── */
+.bz-report-date { font-size:.82rem; color:var(--ink-3,#888); margin-bottom:20px; }
+
+/* ── Navigation links for new pages (append to existing lp-nav or add here) */
+.bz-nav-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px;
+  margin-bottom:32px;
+}
+.bz-nav-card {
+  background:var(--surface-2,#1e2130); border:1px solid var(--hairline,#262730);
+  border-radius:10px; padding:18px 20px; text-decoration:none; display:block;
+  transition:border-color .2s, box-shadow .2s;
+}
+.bz-nav-card:hover { border-color:var(--accent,#f59e0b); box-shadow:0 4px 16px rgba(245,158,11,.12); }
+.bz-nav-card-title { font-size:.95rem; font-weight:700; color:var(--ink-1,#f0f0f0); }
+.bz-nav-card-sub   { font-size:.78rem; color:var(--ink-3,#888); margin-top:4px; }

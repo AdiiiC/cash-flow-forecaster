@@ -21,6 +21,18 @@ from app.routers.accounts import router as accounts_router
 from app.routers.stress import router as stress_router
 from app.routers.scheduled_forecasts import router as scheduled_router
 from app.routers.notification_prefs import router as notif_prefs_router
+from app.routers.working_capital import router as working_capital_router
+from app.routers.burn_rate import router as burn_rate_router, headcount_router
+from app.routers.financial_ratios import router as financial_ratios_router
+from app.routers.arr_revenue import (
+    router as arr_revenue_router,
+    booking_router,
+    conc_router,
+)
+from app.routers.capex import router as capex_router
+from app.routers.misc_b2b import (
+    tax_router, policy_router, financing_router, board_router,
+)
 from app.actuals.router import router as actuals_router
 from app.store import init_db
 
@@ -86,6 +98,18 @@ app.include_router(accounts_router, prefix="/api")
 app.include_router(stress_router, prefix="/api")
 app.include_router(scheduled_router, prefix="/api")
 app.include_router(notif_prefs_router, prefix="/api")
+app.include_router(working_capital_router, prefix="/api")
+app.include_router(burn_rate_router,       prefix="/api")
+app.include_router(headcount_router,       prefix="/api")
+app.include_router(financial_ratios_router,prefix="/api")
+app.include_router(arr_revenue_router,     prefix="/api")
+app.include_router(booking_router,         prefix="/api")
+app.include_router(conc_router,            prefix="/api")
+app.include_router(capex_router,           prefix="/api")
+app.include_router(tax_router,             prefix="/api")
+app.include_router(policy_router,          prefix="/api")
+app.include_router(financing_router,       prefix="/api")
+app.include_router(board_router,           prefix="/api")
 
 
 @app.on_event("startup")
