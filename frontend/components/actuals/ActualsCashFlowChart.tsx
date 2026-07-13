@@ -39,8 +39,8 @@ export function ActualsCashFlowChart({ periods, currency }: Props) {
             tickFormatter={(v: number) => formatCurrency(v, currency, true)}
           />
           <Tooltip
-            formatter={(v: number, name: string) => [
-              formatCurrency(v, currency),
+            formatter={(v, name) => [
+              formatCurrency(v as number, currency),
               name === "inflows" ? "Money in" : "Money out",
             ]}
             contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)" }}

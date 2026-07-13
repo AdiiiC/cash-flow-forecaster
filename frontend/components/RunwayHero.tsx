@@ -1,5 +1,6 @@
 "use client";
 
+import type { JSX } from "react";
 import { ForecastResponse } from "@/lib/api";
 
 interface Props {

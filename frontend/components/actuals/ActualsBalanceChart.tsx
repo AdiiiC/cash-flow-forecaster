@@ -44,7 +44,7 @@ export function ActualsBalanceChart({ periods, currency }: Props) {
             tickFormatter={(v: number) => formatCurrency(v, currency, true)}
           />
           <Tooltip
-            formatter={(v: number) => [formatCurrency(v, currency), "Balance"]}
+            formatter={(v) => [formatCurrency(v as number, currency), "Balance"]}
             contentStyle={{ background: "var(--surface)", border: "1px solid var(--line)" }}
           />
           <ReferenceLine y={0} stroke="var(--neg)" strokeDasharray="4 2" />

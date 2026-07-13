@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SVGProps } from "react";
+import { type JSX, SVGProps } from "react";
 
 function Icon({ id, ...props }: { id: string } & SVGProps<SVGSVGElement>) {
   const base: SVGProps<SVGSVGElement> = {
