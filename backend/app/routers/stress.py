@@ -76,7 +76,7 @@ class StressTestResponse(BaseModel):
 @router.post("", response_model=StressTestResponse)
 def stress_test(body: StressTestRequest,
                 user: dict | None = Depends(get_current_user_optional)):
-    from app.schemas import SyntheticRequest, ThresholdsInput
+from app.schemas import SyntheticRequest
 
     user_id = user["id"] if user else None
 
