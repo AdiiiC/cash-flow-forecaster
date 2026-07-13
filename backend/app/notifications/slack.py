@@ -14,7 +14,6 @@ import json
 import logging
 import threading
 import time
-import urllib.request
 from typing import Iterable
 
 from app.config import get_settings
@@ -76,13 +75,15 @@ def _build_payload(response: ForecastResponse, alerts: list[Alert], source: str)
 
 def _post(url: str, payload: dict) -> None:
     """POST a JSON payload to the webhook. Raises on transport/HTTP error."""
+    import httpx
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+    resp = httpx.post(
+        url, content=data,
+        headers={"Content-Type": "application/json"},
+        timeout=_HTTP_TIMEOUT,
     )
-    with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310 - fixed https webhook
-        if resp.status >= 300:
-            raise RuntimeError(f"Slack webhook returned HTTP {resp.status}")
+    if resp.status_code >= 300:
+        raise RuntimeError(f"Slack webhook returned HTTP {resp.status_code}")
 
 
 def notify_alerts(response: ForecastResponse, source: str) -> bool:

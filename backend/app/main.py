@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,10 +39,18 @@ from app.store import init_db
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
 app = FastAPI(
     title="Cash-Flow-Forecaster API",
     version="0.1.0",
     description="Probabilistic 13-week cash-flow & MRR forecasting with grounded narratives.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -110,11 +119,6 @@ app.include_router(tax_router,             prefix="/api")
 app.include_router(policy_router,          prefix="/api")
 app.include_router(financing_router,       prefix="/api")
 app.include_router(board_router,           prefix="/api")
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    init_db()
 
 
 @app.get("/")

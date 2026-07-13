@@ -31,12 +31,13 @@ _AUTO_ORDER = ("gemini", "anthropic", "openai")
 # first model that responds is used, so accounts without the newest model fall
 # back automatically. Override entirely by setting the matching *_MODEL env var.
 _PREFERRED_MODELS: dict[str, tuple[str, ...]] = {
-    "gemini": ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"),
-    "openai": ("gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"),
+    "gemini": ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"),
+    "openai": ("gpt-4o", "gpt-4.1", "gpt-4.1-mini", "gpt-4o-mini"),
     "anthropic": (
+        "claude-opus-4-5",
+        "claude-sonnet-4-5",
         "claude-3-5-sonnet-latest",
         "claude-3-5-haiku-latest",
-        "claude-3-haiku-20240307",
     ),
 }
 
@@ -63,13 +64,16 @@ class LLMResult:
 
 def _call_gemini(model: str, prompt: str, api_key: str) -> str:
     try:
-        import google.generativeai as genai
-    except ImportError as exc:  # pragma: no cover - import guard
-        raise LLMUnavailable("google-generativeai not installed (pip install google-generativeai).") from exc
-    genai.configure(api_key=api_key)
-    client = genai.GenerativeModel(model, system_instruction=_SYSTEM)
-    resp = client.generate_content(prompt)
-    return (getattr(resp, "text", "") or "").strip()
+        from google import genai as google_genai
+    except ImportError as exc:
+        raise LLMUnavailable("google-genai not installed (pip install google-genai).") from exc
+    client = google_genai.Client(api_key=api_key)
+    resp = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config={"system_instruction": _SYSTEM, "temperature": 0.2},
+    )
+    return (resp.text or "").strip()
 
 
 def _call_openai(model: str, prompt: str, api_key: str) -> str:

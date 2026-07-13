@@ -9,9 +9,7 @@ All network calls use only stdlib; no new dependencies are added.
 """
 from __future__ import annotations
 
-import json
 import time
-import urllib.request
 from datetime import date, timedelta
 from typing import NamedTuple
 
@@ -27,17 +25,18 @@ class RatePoint(NamedTuple):
 
 def _request(base: str, quote: str, days: int) -> list[RatePoint]:
     end = date.today()
-    # Fetch extra days to cover weekends / public holidays
     start = end - timedelta(days=days + 30)
     url = (
         f"{_BASE_URL}/{start}..{end}"
         f"?base={base.upper()}&symbols={quote.upper()}"
     )
-    req = urllib.request.Request(
-        url, headers={"User-Agent": "CashFlowForecaster/1.0", "Accept": "application/json"}
+    import httpx
+    resp = httpx.get(
+        url,
+        headers={"User-Agent": "CashFlowForecaster/1.0", "Accept": "application/json"},
+        timeout=10,
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        body = json.loads(resp.read())
+    body = resp.json()
 
     q = quote.upper()
     raw: dict[str, dict] = body.get("rates", {})

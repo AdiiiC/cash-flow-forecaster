@@ -1,0 +1,22 @@
+[project]
+name = "cash-flow-forecaster"
+version = "0.1.0"
+description = "Probabilistic 13-week cash-flow & MRR forecasting API"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = ["S101", "S311", "B008", "E501"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+strict = false

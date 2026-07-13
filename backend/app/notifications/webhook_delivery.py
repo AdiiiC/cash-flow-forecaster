@@ -9,13 +9,13 @@ import json
 import logging
 import threading
 import time
-import urllib.error
-import urllib.request
 import uuid
 from datetime import datetime, timezone
 
+import httpx
+
 log = logging.getLogger(__name__)
-_RETRY_DELAYS = [0, 30, 120]   # seconds between attempts (0 = immediate first attempt)
+_RETRY_DELAYS = [0, 30, 120]
 
 
 def _sign(secret: str, payload: bytes) -> str:
@@ -23,12 +23,11 @@ def _sign(secret: str, payload: bytes) -> str:
 
 
 def _attempt(url: str, payload: bytes, headers: dict) -> tuple[int | None, str | None]:
-    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status, None
-    except urllib.error.HTTPError as e:
-        return e.code, str(e)
+        resp = httpx.post(url, content=payload, headers=headers, timeout=10)
+        return resp.status_code, None
+    except httpx.HTTPStatusError as e:
+        return e.response.status_code, str(e)
     except Exception as exc:
         return None, str(exc)
 

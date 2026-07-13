@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import io
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -19,8 +18,6 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 import pyotp
-import qrcode
-import qrcode.image.svg
 
 from app.config import get_settings
 
@@ -72,10 +69,12 @@ def totp_provisioning_uri(secret: str, email: str, issuer: str = "ClearCash") ->
 
 def totp_qr_base64(secret: str, email: str) -> str:
     """Return a base64-encoded PNG QR code for the TOTP provisioning URI."""
+    import io
+    import segno
     uri = totp_provisioning_uri(secret, email)
-    img = qrcode.make(uri)
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    segno.make_qr(uri).save(buf, kind="png", scale=6)
+    buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode()
 
 
