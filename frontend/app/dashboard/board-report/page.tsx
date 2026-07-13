@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid } from "recharts";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 const fmt = (v: number) => `$${(v||0).toLocaleString("en-US",{maximumFractionDigits:0})}`;
 
@@ -23,7 +23,7 @@ export default function BoardReportPage() {
   useEffect(() => { const t = localStorage.getItem("cff.token"); setToken(t); if(t) load(t); }, []);
 
   async function load(t: string) {
-    const fetches = await Promise.all([
+    const results = await Promise.allSettled([
       fetch(`${API}/api/board-report`, { headers: authH(t) }),
       fetch(`${API}/api/financing`,    { headers: authH(t) }),
       fetch(`${API}/api/financing/impact`, { headers: authH(t) }),
@@ -34,16 +34,20 @@ export default function BoardReportPage() {
       fetch(`${API}/api/capex/schedule`,{ headers: authH(t) }),
       fetch(`${API}/api/capex/free-cash-flow`, { headers: authH(t) }),
     ]);
-    const [br,fi,fii,tx,cc,vc,aw,cx,fcfR] = fetches;
-    if(br.ok) setReport(await br.json());
-    if(fi.ok) setFinancing(await fi.json());
-    if(fii.ok) setFinImpact(await fii.json());
-    if(tx.ok) setTaxEst(await tx.json());
-    if(cc.ok) setCustConc(await cc.json());
-    if(vc.ok) setVendConc(await vc.json());
-    if(aw.ok) setArrWf(await aw.json());
-    if(cx.ok) setCapex(await cx.json());
-    if(fcfR.ok) setFcf(await fcfR.json());
+    const safe = async (r: PromiseSettledResult<Response>) => {
+      if (r.status === "fulfilled" && r.value.ok) return r.value.json().catch(() => null);
+      return null;
+    };
+    const [br,fi,fii,tx,cc,vc,aw,cx,fcfR] = await Promise.all(results.map(safe));
+    if(br)  setReport(br);
+    if(fi)  setFinancing(fi);
+    if(fii) setFinImpact(fii);
+    if(tx)  setTaxEst(tx);
+    if(cc)  setCustConc(cc);
+    if(vc)  setVendConc(vc);
+    if(aw)  setArrWf(aw);
+    if(cx)  setCapex(cx);
+    if(fcfR)setFcf(fcfR);
   }
 
   async function addFinancing(e: React.FormEvent) {

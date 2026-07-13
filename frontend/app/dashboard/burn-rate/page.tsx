@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, CartesianGrid } from "recharts";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 const fmt = (v: number) => `$${(v||0).toLocaleString("en-US",{maximumFractionDigits:0})}`;
 
@@ -20,16 +20,17 @@ export default function BurnRatePage() {
   useEffect(() => { const t = localStorage.getItem("cff.token"); setToken(t); if(t) load(t); }, []);
 
   async function load(t: string) {
-    const [bRes, bcRes, eRes, hRes] = await Promise.all([
-      fetch(`${API}/api/burn-rate`, { headers: authH(t) }),
-      fetch(`${API}/api/burn-rate/by-category`, { headers: authH(t) }),
-      fetch(`${API}/api/headcount`, { headers: authH(t) }),
-      fetch(`${API}/api/headcount/plan`, { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [b, bc, e, hc] = await Promise.all([
+      safeFetch(`${API}/api/burn-rate`, h),
+      safeFetch(`${API}/api/burn-rate/by-category`, h),
+      safeFetch(`${API}/api/headcount`, h),
+      safeFetch(`${API}/api/headcount/plan`, h),
     ]);
-    if(bRes.ok)  setBurn(await bRes.json());
-    if(bcRes.ok) setBycat(await bcRes.json());
-    if(eRes.ok)  setEmployees(await eRes.json());
-    if(hRes.ok)  setHcPlan(await hRes.json());
+    if (b)  setBurn(b);
+    if (bc) setBycat(bc);
+    if (e)  setEmployees(e);
+    if (hc) setHcPlan(hc);
   }
 
   async function addEmployee(e: React.FormEvent) {

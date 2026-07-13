@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 
 export default function NotificationsPage() {
@@ -28,14 +28,15 @@ export default function NotificationsPage() {
   }, []);
 
   async function loadAll(t: string) {
-    const [pRes, wRes, mRes] = await Promise.all([
-      fetch(`${API}/api/notification-prefs`, { headers: authH(t) }),
-      fetch(`${API}/api/webhooks-config`,    { headers: authH(t) }),
-      fetch(`${API}/api/auth/mfa/status`,    { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [p, w, m] = await Promise.all([
+      safeFetch(`${API}/api/notification-prefs`, h),
+      safeFetch(`${API}/api/webhooks-config`, h),
+      safeFetch(`${API}/api/auth/mfa/status`, h),
     ]);
-    if (pRes.ok) setPrefs(await pRes.json());
-    if (wRes.ok) setWebhooks(await wRes.json());
-    if (mRes.ok) setMfaStatus(await mRes.json());
+    if (p) setPrefs(p);
+    if (w) setWebhooks(w);
+    if (m) setMfaStatus(m);
   }
 
   async function savePrefs() {

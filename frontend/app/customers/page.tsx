@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 const fmt = (v: number) => `$${(v||0).toLocaleString("en-US",{maximumFractionDigits:0})}`;
 
@@ -17,14 +17,15 @@ export default function CustomersPage() {
   useEffect(() => { const t = localStorage.getItem("cff.token"); setToken(t); if (t) load(t); }, []);
 
   async function load(t: string) {
-    const [cRes, mRes, rRes] = await Promise.all([
-      fetch(`${API}/api/customers-mrr`, { headers: authH(t) }),
-      fetch(`${API}/api/customers-mrr/mrr-movement`, { headers: authH(t) }),
-      fetch(`${API}/api/customers-mrr/churn-risk`, { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [c, m, r] = await Promise.all([
+      safeFetch(`${API}/api/customers-mrr`, h),
+      safeFetch(`${API}/api/customers-mrr/mrr-movement`, h),
+      safeFetch(`${API}/api/customers-mrr/churn-risk`, h),
     ]);
-    if (cRes.ok) setCustomers(await cRes.json());
-    if (mRes.ok) setMovement(await mRes.json());
-    if (rRes.ok) setChurnRisk(await rRes.json());
+    if (c) setCustomers(c);
+    if (m) setMovement(m);
+    if (r) setChurnRisk(r);
   }
 
   async function addCustomer(e: React.FormEvent) {

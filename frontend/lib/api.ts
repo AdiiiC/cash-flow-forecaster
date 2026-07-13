@@ -163,6 +163,21 @@ if (!RAW_API_BASE && process.env.NODE_ENV === "production") {
 /** Absolute backend origin. Shared so every caller stays in sync (no duplication). */
 export const API_BASE = RAW_API_BASE ?? "http://localhost:8000";
 
+/**
+ * Fetch wrapper that never throws. Returns parsed JSON on 2xx, null on
+ * any network error, non-2xx status, or JSON parse failure.
+ * Use this in dashboard pages so a single failed endpoint can't crash the whole page.
+ */
+export async function safeFetch(url: string, opts?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(url, opts);
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } catch {
+    return null;
+  }
+}
+
 export class ApiError extends Error {}
 
 /* ---------------------------------------------------------------------------

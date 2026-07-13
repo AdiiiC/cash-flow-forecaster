@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 
 function authH(token: string) {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -32,16 +32,15 @@ export default function TeamPage() {
 
   async function load(t: string) {
     setLoading(true);
-    try {
-      const [oRes, mRes, iRes] = await Promise.all([
-        fetch(`${API}/api/org`, { headers: authH(t) }),
-        fetch(`${API}/api/org/members`, { headers: authH(t) }),
-        fetch(`${API}/api/org/invites`, { headers: authH(t) }),
-      ]);
-      if (oRes.ok)  setOrg(await oRes.json());
-      if (mRes.ok)  setMembers(await mRes.json());
-      if (iRes.ok)  setInvites(await iRes.json());
-    } catch { /* no org yet */ }
+    const h = { headers: authH(t) };
+    const [o, m, i] = await Promise.all([
+      safeFetch(`${API}/api/org`, h),
+      safeFetch(`${API}/api/org/members`, h),
+      safeFetch(`${API}/api/org/invites`, h),
+    ]);
+    if (o) setOrg(o);
+    if (m) setMembers(m);
+    if (i) setInvites(i);
     setLoading(false);
   }
 

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 const fmt = (v: number) => `$${(v||0).toLocaleString("en-US",{maximumFractionDigits:0})}`;
 
@@ -16,12 +16,13 @@ export default function BudgetPage() {
   useEffect(() => { const t = localStorage.getItem("cff.token"); setToken(t); if (t) load(t); }, []);
 
   async function load(t: string) {
-    const [bRes, vRes] = await Promise.all([
-      fetch(`${API}/api/budget`, { headers: authH(t) }),
-      fetch(`${API}/api/budget/variance`, { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [b, v] = await Promise.all([
+      safeFetch(`${API}/api/budget`, h),
+      safeFetch(`${API}/api/budget/variance`, h),
     ]);
-    if (bRes.ok) setBudgets(await bRes.json());
-    if (vRes.ok) setVariance(await vRes.json());
+    if (b) setBudgets(b);
+    if (v) setVariance(v);
   }
 
   async function addLine(e: React.FormEvent) {

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { RadialBarChart, RadialBar, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 const fmt = (v: number) => `$${(v||0).toLocaleString("en-US",{maximumFractionDigits:0})}`;
 
@@ -17,14 +17,15 @@ export default function FinancialHealthPage() {
   useEffect(() => { const t = localStorage.getItem("cff.token"); setToken(t); if(t) load(t); }, []);
 
   async function load(t: string) {
-    const [rRes, sRes, cRes] = await Promise.all([
-      fetch(`${API}/api/financial-ratios`, { headers: authH(t) }),
-      fetch(`${API}/api/liquidity-score`,  { headers: authH(t) }),
-      fetch(`${API}/api/financial-ratios/cost-structure`, { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [r, s, c] = await Promise.all([
+      safeFetch(`${API}/api/financial-ratios`, h),
+      safeFetch(`${API}/api/liquidity-score`, h),
+      safeFetch(`${API}/api/financial-ratios/cost-structure`, h),
     ]);
-    if(rRes.ok) setRatios(await rRes.json());
-    if(sRes.ok) setScore(await sRes.json());
-    if(cRes.ok) setCs(await cRes.json());
+    if (r) setRatios(r);
+    if (s) setScore(s);
+    if (c) setCs(c);
   }
 
   async function saveCs() {

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
 
 interface Variance { week_start: string; actual_net: number; forecast_p50: number | null;
@@ -22,12 +22,13 @@ export default function ActualsPage() {
   }, []);
 
   async function loadAll(t: string) {
-    const [aRes, vRes] = await Promise.all([
-      fetch(`${API}/api/cashflow-actuals`, { headers: authH(t) }),
-      fetch(`${API}/api/cashflow-actuals/variance`, { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [a, v] = await Promise.all([
+      safeFetch(`${API}/api/cashflow-actuals`, h),
+      safeFetch(`${API}/api/cashflow-actuals/variance`, h),
     ]);
-    if (aRes.ok) setActuals(await aRes.json());
-    if (vRes.ok) setVariance(await vRes.json());
+    if (a) setActuals(a);
+    if (v) setVariance(v);
   }
 
   async function addEntry(e: React.FormEvent) {

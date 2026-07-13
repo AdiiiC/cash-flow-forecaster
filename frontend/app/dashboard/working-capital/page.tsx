@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { API_BASE as API, safeFetch } from "@/lib/api";
 const authH = (t: string) => ({ Authorization: `Bearer ${t}` });
 
 export default function WorkingCapitalPage() {
@@ -18,15 +18,15 @@ export default function WorkingCapitalPage() {
   }, []);
 
   async function load(t: string) {
-    const [mRes, arRes, apRes] = await Promise.all([
-      fetch(`${API}/api/working-capital/metrics`, { headers: authH(t) }),
-      fetch(`${API}/api/working-capital/ar-aging`, { headers: authH(t) }),
-      fetch(`${API}/api/working-capital/ap-aging`, { headers: authH(t) }),
+    const h = { headers: authH(t) };
+    const [m, ar, ap] = await Promise.all([
+      safeFetch(`${API}/api/working-capital/metrics`, h),
+      safeFetch(`${API}/api/working-capital/ar-aging`, h),
+      safeFetch(`${API}/api/working-capital/ap-aging`, h),
     ]);
-    if (mRes.ok)  setMetrics(await mRes.json());
-    if (arRes.ok) setArAging(await arRes.json());
-    if (apRes.ok) setApAging(await apAging);
-    if (apRes.ok) { const d = await apRes.json(); setApAging(d); }
+    if (m)  setMetrics(m);
+    if (ar) setArAging(ar);
+    if (ap) setApAging(ap);
   }
 
   const fmt = (v: number) => v?.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
