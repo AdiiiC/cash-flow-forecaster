@@ -141,11 +141,11 @@ export function Controls({ params, onParamsChange, onRunDemo, onUpload, loading 
       <div className="field">
         <label>Or upload your own data (CSV)</label>
         <button className="file-btn" disabled={loading}>
-          {fileName ?? "Upload CSV"}
+          {fileName ?? "Upload CSV / XLSX"}
           <input
             ref={fileRef}
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) {

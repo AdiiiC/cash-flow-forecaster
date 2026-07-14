@@ -5,12 +5,11 @@ Endpoints:
   POST   /api/budget              — create a budget line
   PUT    /api/budget/{id}         — update a line
   DELETE /api/budget/{id}         — delete a line
-  POST   /api/budget/upload       — bulk CSV import
+  POST   /api/budget/upload       — bulk CSV/XLSX import
   GET    /api/budget/variance     — budget vs forecast comparison
 """
 from __future__ import annotations
 
-import csv
 import io
 import uuid
 from datetime import datetime, timezone
@@ -82,30 +81,39 @@ async def upload_budget(
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user),
 ):
-    """CSV columns: fiscal_year, category, direction, weekly_amount, label"""
+    """CSV or XLSX columns: fiscal_year, category, direction, weekly_amount, label"""
+    fname = (file.filename or "").lower()
+    if not (fname.endswith(".csv") or fname.endswith(".xlsx")):
+        raise HTTPException(400, "Please upload a .csv or .xlsx file.")
     content = await file.read()
     try:
-        reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+        if fname.endswith(".xlsx"):
+            df = pd.read_excel(io.BytesIO(content))
+        else:
+            df = pd.read_csv(io.StringIO(content.decode("utf-8-sig")))
+        df.columns = [str(c).strip().lower() for c in df.columns]
         saved = 0
         now = datetime.now(timezone.utc).isoformat()
-        for row in reader:
+        for _, row in df.iterrows():
             try:
                 store.save_budget(
                     id=uuid.uuid4().hex[:12],
                     user_id=user["id"],
                     fiscal_year=int(row["fiscal_year"]),
-                    category=row["category"].strip(),
-                    direction=row["direction"].strip().lower(),
-                    weekly_amount=float(row["weekly_amount"].replace(",", "")),
-                    label=row.get("label", ""),
+                    category=str(row["category"]).strip(),
+                    direction=str(row["direction"]).strip().lower(),
+                    weekly_amount=float(str(row["weekly_amount"]).replace(",", "")),
+                    label=str(row.get("label", "") or ""),
                     created_at=now,
                 )
                 saved += 1
-            except (KeyError, ValueError):
+            except (KeyError, ValueError, TypeError):
                 continue
         return {"rows_imported": saved}
+    except HTTPException:
+        raise
     except Exception as exc:
-        raise HTTPException(400, f"Could not parse CSV: {exc}")
+        raise HTTPException(400, f"Could not parse file: {exc}")
 
 
 @router.get("/variance")

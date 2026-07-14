@@ -89,9 +89,9 @@ export default function BudgetPage() {
           {info && <p className="bz-info">{info}</p>}
           <div className="bz-upload-row">
             <label className="bz-btn bz-btn--ghost bz-btn--sm" style={{cursor:"pointer"}}>
-              ⬆ Import CSV <input type="file" accept=".csv" hidden onChange={uploadCSV} />
+              ⬆ Import CSV / XLSX <input type="file" accept=".csv,.xlsx" hidden onChange={uploadCSV} />
             </label>
-            <span className="bz-hint">CSV: fiscal_year, category, direction, weekly_amount, label</span>
+            <span className="bz-hint">CSV or XLSX: fiscal_year, category, direction, weekly_amount, label</span>
           </div>
           <form onSubmit={addLine} className="bz-form bz-form--row" style={{marginBottom:"14px",flexWrap:"wrap"}}>
             <input className="bz-input" type="number" placeholder="Year" value={form.fiscal_year} onChange={e=>setForm(f=>({...f,fiscal_year:parseInt(e.target.value)}))} style={{width:"80px"}} required />

@@ -148,16 +148,17 @@ async def forecast_upload(
     currency: str = "USD",
     user: dict | None = Depends(get_current_user_optional),
 ) -> ForecastResponse:
-    """Upload a CSV of transactions and forecast it."""
-    if not (file.filename or "").lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Please upload a .csv file.")
+    """Upload a CSV or XLSX of transactions and forecast it."""
+    fname = (file.filename or "").lower()
+    if not (fname.endswith(".csv") or fname.endswith(".xlsx")):
+        raise HTTPException(status_code=400, detail="Please upload a .csv or .xlsx file.")
     # Cap the read so a huge upload can't exhaust memory before we validate it.
     max_bytes = 5 * 1024 * 1024
     raw = await file.read(max_bytes + 1)
     if len(raw) > max_bytes:
         raise HTTPException(status_code=413, detail="File too large: max 5 MB.")
     try:
-        ledger = parse_csv(raw, opening_balance=opening_balance, currency=currency)
+        ledger = parse_csv(raw, opening_balance=opening_balance, currency=currency, filename=file.filename or "")
     except IngestError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return build_forecast(

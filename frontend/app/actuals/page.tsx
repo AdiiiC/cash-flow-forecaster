@@ -112,9 +112,9 @@ export default function ActualsPage() {
           <div className="bz-upload-row">
             <label className="bz-btn bz-btn--ghost bz-btn--sm" style={{cursor:"pointer"}}>
               ⬆ Import CSV
-              <input type="file" accept=".csv" hidden onChange={uploadCSV} />
+              <input type="file" accept=".csv,.xlsx" hidden onChange={uploadCSV} />
             </label>
-            <span className="bz-hint">CSV columns: date, category, direction, amount</span>
+            <span className="bz-hint">CSV or XLSX columns: date, category, direction, amount</span>
           </div>
           {info && <p className="bz-info">{info}</p>}
           <form onSubmit={addEntry} className="bz-form bz-form--row" style={{marginBottom:"20px"}}>

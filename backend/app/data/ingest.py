@@ -1,4 +1,4 @@
-"""CSV ingestion with strict, boundary-level validation.
+"""CSV / XLSX ingestion with strict, boundary-level validation.
 
 Expected columns (case-insensitive): date, amount, direction, category,
 optional customer_id, optional status. Anything malformed is rejected with
@@ -22,30 +22,38 @@ MAX_ROWS = 100_000
 
 
 class IngestError(ValueError):
-    """Raised when an uploaded CSV cannot be parsed into a valid Ledger."""
+    """Raised when an uploaded file cannot be parsed into a valid Ledger."""
+
+
+def _df_from_upload(raw: bytes, filename: str = "") -> pd.DataFrame:
+    """Return a DataFrame from raw bytes, auto-detecting CSV vs XLSX by filename."""
+    if filename.lower().endswith(".xlsx"):
+        return pd.read_excel(io.BytesIO(raw), nrows=MAX_ROWS + 1)
+    return pd.read_csv(io.BytesIO(raw), nrows=MAX_ROWS + 1)
 
 
 def parse_csv(
     raw: bytes,
     opening_balance: float = 0.0,
     currency: str = "USD",
+    filename: str = "",
 ) -> Ledger:
     try:
-        df = pd.read_csv(io.BytesIO(raw), nrows=MAX_ROWS + 1)
+        df = _df_from_upload(raw, filename)
     except Exception as exc:  # noqa: BLE001 - surface any parse failure uniformly
-        raise IngestError(f"Could not read CSV: {exc}") from exc
+        raise IngestError(f"Could not read file: {exc}") from exc
 
     if df.empty:
-        raise IngestError("CSV contains no rows.")
+        raise IngestError("File contains no rows.")
 
     if len(df) > MAX_ROWS:
-        raise IngestError(f"CSV too large: max {MAX_ROWS:,} rows supported.")
+        raise IngestError(f"File too large: max {MAX_ROWS:,} rows supported.")
 
     df.columns = [str(c).strip().lower() for c in df.columns]
     missing = REQUIRED - set(df.columns)
     if missing:
         raise IngestError(
-            f"CSV missing required column(s): {', '.join(sorted(missing))}. "
+            f"Missing required column(s): {', '.join(sorted(missing))}. "
             f"Required: date, amount, direction."
         )
 

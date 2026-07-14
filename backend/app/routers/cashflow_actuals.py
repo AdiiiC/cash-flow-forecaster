@@ -3,13 +3,12 @@
 Endpoints:
   GET    /api/cashflow-actuals          — list actual entries
   POST   /api/cashflow-actuals          — manual entry
-  POST   /api/cashflow-actuals/upload   — bulk CSV upload
+  POST   /api/cashflow-actuals/upload   — bulk CSV/XLSX upload
   DELETE /api/cashflow-actuals/{id}     — delete entry
   GET    /api/cashflow-actuals/variance — compare actuals vs latest forecast
 """
 from __future__ import annotations
 
-import csv
 import io
 import uuid
 from datetime import datetime, date, timedelta, timezone
