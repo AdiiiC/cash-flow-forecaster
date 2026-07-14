@@ -320,9 +320,10 @@ export default function Features() {
         <Stagger className="grid sm:grid-cols-2 lg:grid-cols-5 gap-2">
           {capabilities.map((c) => (
             <StaggerItem key={c.key}>
-              <a
-                href={`#${c.key}`}
-                className="block bg-surface hairline rounded-card p-5 hover:bg-elevated transition-colors h-full"
+              <button
+                type="button"
+                onClick={() => document.getElementById(c.key)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="w-full text-left bg-surface hairline rounded-card p-5 hover:bg-elevated transition-colors h-full cursor-pointer"
                 data-testid={`features-nav-${c.key}`}
               >
                 <span className="overline">{c.tag}</span>
@@ -330,7 +331,7 @@ export default function Features() {
                   <c.icon size={15} className="text-accent" />
                   <p className="text-[13.5px] text-white">{c.title}</p>
                 </div>
-              </a>
+              </button>
             </StaggerItem>
           ))}
         </Stagger>
