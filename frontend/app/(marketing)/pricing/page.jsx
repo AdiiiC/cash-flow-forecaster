@@ -1,6 +1,7 @@
 "use client";
-import React, { useState } from 'react';
-import { Check, Minus, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, Minus, ArrowRight, X } from 'lucide-react';
+import Link from 'next/link';
 import { Reveal, Stagger, StaggerItem } from '@/components/marketing/Motion';
 import Button from '@/components/marketing/Button';
 
@@ -94,9 +95,66 @@ function formatPer(tier, annual) {
 
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
+  const [exitModal, setExitModal] = useState(false);
+  const [exitShown, setExitShown] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.clientY <= 0 && !exitShown) {
+        setExitModal(true);
+        setExitShown(true);
+      }
+    };
+    document.addEventListener('mouseleave', handler);
+    return () => document.removeEventListener('mouseleave', handler);
+  }, [exitShown]);
 
   return (
     <div>
+      {/* Exit-intent modal */}
+      {exitModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          data-testid="pricing-exit-modal"
+          onClick={() => setExitModal(false)}
+        >
+          <div
+            className="bg-elevated hairline rounded-card p-8 max-w-md w-full shadow-subtle relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setExitModal(false)}
+              className="absolute top-4 right-4 text-muted hover:text-white transition-colors"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+            <p className="overline text-accent">Before you go</p>
+            <h2 className="mt-3 text-[22px] font-medium text-white leading-snug tracking-tight">
+              Talk to a founder for 10&nbsp;min.
+            </h2>
+            <p className="mt-3 text-[13.5px] text-muted leading-relaxed">
+              Not ready to commit? No deck, no pitch. Just a real conversation about your cash-flow problem — book a slot and we&apos;ll call you back within the hour.
+            </p>
+            <div className="mt-6 flex flex-col gap-2">
+              <Link
+                href="/contact"
+                onClick={() => setExitModal(false)}
+                className="flex items-center justify-center gap-2 bg-accent hover:bg-[#f0b25c] text-bg rounded-btn py-2.5 text-[13.5px] font-medium transition-colors"
+                data-testid="pricing-exit-modal-cta"
+              >
+                Book 10-min chat <ArrowRight size={13} />
+              </Link>
+              <button
+                onClick={() => setExitModal(false)}
+                className="text-[12.5px] text-muted hover:text-white transition-colors py-2"
+              >
+                No thanks, I&apos;ll figure it out myself
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <section className="max-w-7xl mx-auto px-5 lg:px-8 pt-20 pb-14" data-testid="pricing-hero">
         <Reveal>

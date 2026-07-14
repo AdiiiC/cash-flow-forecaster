@@ -3475,3 +3475,21 @@ button:disabled {
 .cc-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 999px; background: #fff; border: 2px solid #e0a34a; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,.5); transition: transform 120ms ease-out; }
 .cc-range::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.1); }
 .cc-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 999px; background: #fff; border: 2px solid #e0a34a; cursor: grab; }
+
+/* ─── Print-friendly /pricing ────────────────────────────────────────────── */
+@media print {
+  header, footer, nav, [data-testid="pricing-exit-modal"],
+  .sticky, [class*="sticky"], button:not([data-testid*="pricing"]) { display: none !important; }
+  body  { background: #fff !important; color: #000 !important; font-size: 11pt; }
+  .bg-surface, .bg-elevated, .bg-bg { background: #f7f7f7 !important; color: #000 !important; }
+  .text-white  { color: #000 !important; }
+  .text-muted  { color: #555 !important; }
+  .text-positive { color: #0a6640 !important; }
+  .text-negative { color: #b00020 !important; }
+  .text-accent   { color: #b07020 !important; }
+  .hairline, .hairline-b, .hairline-t { border-color: #ddd !important; }
+  [style*="borderColor"] { border-color: #ddd !important; }
+  .rounded-card { border-radius: 4pt !important; }
+  [data-testid="pricing-comparison-table"] { page-break-inside: avoid; }
+  @page { margin: 1.5cm; }
+}

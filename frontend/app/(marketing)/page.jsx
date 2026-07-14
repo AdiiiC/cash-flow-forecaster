@@ -237,9 +237,24 @@ export default function Landing() {
             </div>
           ))}
         </div>
+        {/* Trust logos strip */}
+        <div className="hairline-t" data-testid="trust-logos-strip">
+          <div className="max-w-7xl mx-auto px-5 lg:px-8 py-5 flex flex-wrap items-center gap-x-8 gap-y-3">
+            <p className="overline shrink-0">Trusted by teams at</p>
+            {['Stackline','Nimbus','Volt Health','Meridian','Arcus','Portsmith'].map((name) => (
+              <span
+                key={name}
+                className="text-[13px] font-medium text-muted/50 tracking-tight select-none"
+                style={{ filter: 'grayscale(1)' }}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="hairline-t">
           <div className="max-w-7xl mx-auto px-5 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <p className="overline">Trusted by 340+ founders</p>
+            <p className="overline">340+ founders modelling with ClearCash</p>
             <div className="flex items-center gap-1.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star key={i} size={13} className="text-accent fill-accent" />
