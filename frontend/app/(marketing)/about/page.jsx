@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Github, Linkedin, Twitter } from 'lucide-react';
+import { Code2, Link2, AtSign } from 'lucide-react';
 import { Reveal, Stagger, StaggerItem } from '@/components/marketing/Motion';
 import Button from '@/components/marketing/Button';
 
@@ -116,13 +116,13 @@ export default function About() {
                   <p className="mt-4 text-[13px] text-muted leading-relaxed">{m.bio}</p>
                   <div className="mt-6 flex items-center gap-3 text-muted">
                     <button type="button" aria-label="LinkedIn" className="hover:text-white transition-colors cursor-pointer bg-transparent border-0 p-0" data-testid={`team-linkedin-${m.init.toLowerCase()}`}>
-                      <Linkedin size={14} />
+                      <Link2 size={14} />
                     </button>
                     <button type="button" aria-label="Twitter" className="hover:text-white transition-colors cursor-pointer bg-transparent border-0 p-0" data-testid={`team-twitter-${m.init.toLowerCase()}`}>
-                      <Twitter size={14} />
+                      <AtSign size={14} />
                     </button>
                     <button type="button" aria-label="GitHub" className="hover:text-white transition-colors cursor-pointer bg-transparent border-0 p-0" data-testid={`team-github-${m.init.toLowerCase()}`}>
-                      <Github size={14} />
+                      <Code2 size={14} />
                     </button>
                   </div>
                 </div>
