@@ -1,6 +1,5 @@
+"use client";
 import dynamic from "next/dynamic";
-
-export const metadata = { title: "ROI Calculator — ClearCash" };
 
 // Skip SSR: recharts touches browser-only APIs during static generation
 const RoiCalculatorContent = dynamic(
