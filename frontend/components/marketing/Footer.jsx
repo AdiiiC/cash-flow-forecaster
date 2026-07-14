@@ -8,8 +8,8 @@ const cols = [
     links: [
       { label: 'Features', to: '/features' },
       { label: 'Pricing', to: '/pricing' },
-      { label: 'Changelog', to: '/features' },
-      { label: 'Docs', to: '/features' },
+      { label: 'ROI Calculator', to: '/roi-calculator' },
+      { label: 'Changelog', to: '/blog' },
     ],
   },
   {
@@ -17,8 +17,8 @@ const cols = [
     links: [
       { label: 'About', to: '/about' },
       { label: 'Contact', to: '/contact' },
-      { label: 'Careers', to: '/about' },
-      { label: 'Press', to: '/about' },
+      { label: 'Case Studies', to: '/case-studies' },
+      { label: 'Blog', to: '/blog' },
     ],
   },
   {

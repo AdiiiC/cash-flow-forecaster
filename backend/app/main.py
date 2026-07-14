@@ -34,6 +34,7 @@ from app.routers.capex import router as capex_router
 from app.routers.misc_b2b import (
     tax_router, policy_router, financing_router, board_router,
 )
+from app.routers.contact import router as contact_router
 from app.actuals.router import router as actuals_router
 from app.store import init_db
 
@@ -69,15 +70,32 @@ app.add_middleware(
 _RATE_MAX = 30  # requests
 _RATE_WINDOW = 60.0  # seconds
 _RATE_PREFIXES = ("/api/forecast",)
+# Tighter limit for the public contact endpoint (anti-spam)
+_CONTACT_RATE_MAX = 5
+_CONTACT_RATE_WINDOW = 300.0  # 5 per 5 minutes per IP
 _hits: dict[str, deque[float]] = defaultdict(deque)
+_contact_hits: dict[str, deque[float]] = defaultdict(deque)
 
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     path = request.url.path
+    ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+
+    # Tight per-IP limit for the public contact endpoint
+    if request.method == "POST" and path == "/api/contact":
+        bucket = _contact_hits[ip]
+        while bucket and now - bucket[0] > _CONTACT_RATE_WINDOW:
+            bucket.popleft()
+        if len(bucket) >= _CONTACT_RATE_MAX:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests — please wait a few minutes before submitting again."},
+            )
+        bucket.append(now)
+
     if request.method != "OPTIONS" and any(path.startswith(p) for p in _RATE_PREFIXES):
-        ip = request.client.host if request.client else "unknown"
-        now = time.monotonic()
         bucket = _hits[ip]
         while bucket and now - bucket[0] > _RATE_WINDOW:
             bucket.popleft()
@@ -119,6 +137,7 @@ app.include_router(tax_router,             prefix="/api")
 app.include_router(policy_router,          prefix="/api")
 app.include_router(financing_router,       prefix="/api")
 app.include_router(board_router,           prefix="/api")
+app.include_router(contact_router,         prefix="/api")
 
 
 @app.get("/")

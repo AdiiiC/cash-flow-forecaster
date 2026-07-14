@@ -1,12 +1,15 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Calendar, Mail, MapPin, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Reveal } from '@/components/marketing/Motion';
+
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
 
 const schema = z.object({
   name: z.string().min(2, 'Please enter your name.').max(120),
@@ -21,6 +24,22 @@ const teamSizes = ['1 (solo)', '2–10', '11–50', '51–200', '201+'];
 export default function Contact() {
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileRef = useRef(null);
+  const widgetRef = useRef(null);
+  const params = useSearchParams();
+
+  // Build prefill message from ROI calculator query params
+  const roiContext = (() => {
+    const cash = params.get('cash');
+    const gain = params.get('gain');
+    const scene = params.get('scene');
+    const ccy  = params.get('ccy') || 'USD';
+    if (!cash || !gain) return '';
+    const sceneName = scene ? scene.charAt(0).toUpperCase() + scene.slice(1) : 'Base';
+    return `Came from ROI calculator — ${ccy} ${Number(cash).toLocaleString()} cash, ${sceneName} scenario → +${gain} months runway.`;
+  })();
+
   const {
     register,
     handleSubmit,
@@ -28,19 +47,51 @@ export default function Contact() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', email: '', company: '', team_size: '', message: '' },
+    defaultValues: {
+      name: '', email: '', company: '', team_size: '',
+      message: roiContext ? roiContext : '',
+    },
   });
+
+  // Mount Turnstile widget
+  useEffect(() => {
+    if (!turnstileRef.current || typeof window === 'undefined') return;
+    const tryMount = () => {
+      if (window.turnstile && turnstileRef.current && !widgetRef.current) {
+        widgetRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: SITE_KEY,
+          callback: (token) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(''),
+          theme: 'dark',
+        });
+      }
+    };
+    tryMount();
+    const id = setTimeout(tryMount, 800); // retry after script loads
+    return () => {
+      clearTimeout(id);
+      if (widgetRef.current !== null && window.turnstile) {
+        window.turnstile.remove(widgetRef.current);
+        widgetRef.current = null;
+      }
+    };
+  }, []);
 
   const onSubmit = async (values) => {
     setSubmitting(true);
     try {
-      const base = process.env.REACT_APP_BACKEND_URL;
-      await axios.post(`${base}/api/contact`, values);
-      toast.success('Thanks — we\'ll be in touch within one business day.');
+      const base = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000';
+      await axios.post(`${base}/api/contact`, {
+        ...values,
+        turnstile_token: turnstileToken || null,
+        context: roiContext || null,
+      });
+      toast.success("Thanks — we'll be in touch within one business day.");
       setSent(true);
       reset();
     } catch (e) {
-      toast.error('Could not send. Please try again in a moment.');
+      const msg = e?.response?.data?.detail || 'Could not send. Please try again in a moment.';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -170,6 +221,9 @@ export default function Contact() {
                       />
                     </Field>
 
+                    {/* Cloudflare Turnstile */}
+                    <div ref={turnstileRef} className="cf-turnstile" data-testid="contact-turnstile" />
+
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
                       <p className="text-[11.5px] text-muted">
                         By submitting, you agree to our privacy policy. No spam. No newsletters.
@@ -191,6 +245,27 @@ export default function Contact() {
           </div>
         </div>
       </section>
+
+      {/* Cal.com inline booking embed */}
+      {process.env.NEXT_PUBLIC_CALCOM_LINK && (
+        <section className="hairline-t bg-surface" data-testid="calcom-embed-section">
+          <div className="max-w-7xl mx-auto px-5 lg:px-8 py-16">
+            <Reveal>
+              <p className="overline text-center">Or pick a slot instantly</p>
+              <h2 className="mt-3 text-center text-[26px] font-medium text-white tracking-tight">
+                Book a 20-minute live demo
+              </h2>
+            </Reveal>
+            <div
+              className="mt-10 rounded-card hairline overflow-hidden"
+              data-cal-link={process.env.NEXT_PUBLIC_CALCOM_LINK}
+              data-cal-config='{"layout":"month_view","theme":"dark"}'
+              style={{ minHeight: 600 }}
+              data-testid="calcom-embed"
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

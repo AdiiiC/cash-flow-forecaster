@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     data_encryption_key: str = ""
 
+    # ---- Cloudflare Turnstile (contact form bot protection) ----------------
+    # Get keys at https://dash.cloudflare.com/?to=/:account/turnstile
+    # Dev test key (always passes): 1x00000000000000000000AA
+    turnstile_secret: str = ""
+    turnstile_site_key: str = "1x00000000000000000000AA"  # test key — override in prod
+
     # ---- Email (Resend) ---------------------------------------------------
     # Transactional email for OTP codes, weekly digest, and invite emails.
     # Sign up free at https://resend.com and add your API key here.

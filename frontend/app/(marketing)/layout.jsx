@@ -1,9 +1,10 @@
 import { Toaster } from 'sonner';
-import Link from 'next/link';
+import Script from 'next/script';
 import Navbar from '@/components/marketing/Navbar';
 import Footer from '@/components/marketing/Footer';
 import CookieBanner from '@/components/marketing/CookieBanner';
 import StickyMobileCTA from '@/components/marketing/StickyMobileCTA';
+import CommandPalette from '@/components/marketing/CommandPalette';
 
 const BASE = 'https://clearcash.app';
 
@@ -39,11 +40,18 @@ export default function MarketingLayout({ children }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* Cloudflare Turnstile */}
+      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload" />
+      {/* Cal.com embed (only loads when NEXT_PUBLIC_CALCOM_LINK is set) */}
+      {process.env.NEXT_PUBLIC_CALCOM_LINK && (
+        <Script src="https://app.cal.com/embed/embed.js" strategy="lazyOnload" />
+      )}
       <Navbar />
       <main>{children}</main>
       <Footer />
       <CookieBanner />
       <StickyMobileCTA />
+      <CommandPalette />
       <Toaster theme="dark" position="bottom-right" />
     </>
   );

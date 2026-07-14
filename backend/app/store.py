@@ -1466,6 +1466,40 @@ _cash_policy = Table(
     Column("updated_at", String(40), nullable=False),
 )
 
+_contact_submissions = Table(
+    "contact_submissions", _metadata,
+    Column("id", String(32), primary_key=True),
+    Column("name", String(200), nullable=False),
+    Column("email", String(320), nullable=False),
+    Column("company", String(200), nullable=False),
+    Column("team_size", String(50), nullable=False),
+    Column("message", Text, nullable=False),
+    Column("context", Text, nullable=False, default=""),
+    Column("ip", String(64), nullable=False, default=""),
+    Column("created_at", String(40), nullable=False),
+)
+
+
+def save_contact_submission(*, id: str, name: str, email: str, company: str,
+                             team_size: str, message: str, context: str,
+                             ip: str, created_at: str) -> None:
+    _ensure()
+    with _engine().begin() as conn:
+        conn.execute(insert(_contact_submissions).values(
+            id=id, name=name, email=email, company=company,
+            team_size=team_size, message=message, context=context,
+            ip=ip, created_at=created_at))
+
+
+def list_contact_submissions(limit: int = 200) -> list[dict]:
+    _ensure()
+    with _engine().connect() as conn:
+        return _rows(conn.execute(
+            select(_contact_submissions)
+            .order_by(_contact_submissions.c.created_at.desc())
+            .limit(limit)
+        ))
+
 # ── Store helpers — Wave 2 ─────────────────────────────────────────────────────
 
 def get_all_invoices_for_user(user_id: str) -> list[dict]:
