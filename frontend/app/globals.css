@@ -3441,3 +3441,37 @@ button:disabled {
 }
 .dev-link-card:hover { border-color: var(--accent); }
 .dev-link-card span { font-size: 11px; font-weight: 400; color: var(--text-faint); }
+
+/* ─── Marketing site (Tailwind) ──────────────────────────────────────────── */
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .hairline        { border: 1px solid rgba(255,255,255,0.06); }
+  .hairline-b      { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .hairline-t      { border-top: 1px solid rgba(255,255,255,0.06); }
+  .grid-pattern {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+}
+
+@keyframes cc-reveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cc-reveal {
+  opacity: 1;
+  animation: cc-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
+}
+
+/* Range slider — ROI calculator */
+.cc-range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px; outline: none; cursor: pointer; }
+.cc-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 999px; background: #fff; border: 2px solid #e0a34a; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,.5); transition: transform 120ms ease-out; }
+.cc-range::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.1); }
+.cc-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 999px; background: #fff; border: 2px solid #e0a34a; cursor: grab; }
