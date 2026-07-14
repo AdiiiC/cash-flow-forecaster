@@ -1,6 +1,7 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { CURRENCIES as ALL_CURRENCIES, useCurrency } from '@/lib/currency';
 
 import {
   ResponsiveContainer,
@@ -26,14 +27,8 @@ const SCENARIOS = [
     hint: 'Top-quartile outcome — 9% burn reduction, 2.5% FX margin' },
 ];
 
-// ---- Currencies ----
-const CURRENCIES = [
-  { code: 'USD', symbol: '$',  name: 'USD' },
-  { code: 'EUR', symbol: '€',  name: 'EUR' },
-  { code: 'GBP', symbol: '£',  name: 'GBP' },
-  { code: 'INR', symbol: '₹',  name: 'INR' },
-  { code: 'SGD', symbol: 'S$', name: 'SGD' },
-];
+// Use the shared currency list from global context
+const CURRENCIES = ALL_CURRENCIES;
 
 function fmt(n, symbol = '$') {
   const abs = Math.abs(n);
@@ -71,11 +66,26 @@ export default function RoiCalculator() {
   const [xborder, setXborder] = useState(20_000);
   const [horizon] = useState(24);
   const [sceneIdx, setSceneIdx] = useState(1); // default: Base
-  const [currIdx, setCurrIdx] = useState(0);   // default: USD
+  const { currency: globalCurrency, setCurrency: setGlobalCurrency } = useCurrency();
+  const [currIdx, setCurrIdx] = useState(
+    () => CURRENCIES.findIndex((c) => c.code === globalCurrency.code) ?? 0
+  );
+
+  // Keep local picker in sync when global currency changes (e.g. changed in Navbar)
+  useEffect(() => {
+    const idx = CURRENCIES.findIndex((c) => c.code === globalCurrency.code);
+    if (idx >= 0) setCurrIdx(idx);
+  }, [globalCurrency.code]);
 
   const scene = SCENARIOS[sceneIdx];
   const curr = CURRENCIES[currIdx];
   const f = (n) => fmt(n, curr.symbol);
+
+  // Propagate local selection to the global context
+  const handleCurrChange = (i) => {
+    setCurrIdx(i);
+    setGlobalCurrency(CURRENCIES[i]);
+  };
 
   const result = useMemo(() => {
     const burnReduction = scene.burnReduction;
@@ -139,7 +149,7 @@ export default function RoiCalculator() {
           {CURRENCIES.map((c, i) => (
             <button
               key={c.code}
-              onClick={() => setCurrIdx(i)}
+              onClick={() => handleCurrChange(i)}
               data-testid={`roi-currency-${c.code.toLowerCase()}`}
               className={`text-[11.5px] px-2.5 py-1 rounded-btn hairline transition-colors num ${
                 currIdx === i ? 'bg-elevated text-white' : 'bg-surface text-muted hover:text-white'

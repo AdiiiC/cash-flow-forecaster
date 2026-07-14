@@ -5,6 +5,7 @@ import Footer from '@/components/marketing/Footer';
 import CookieBanner from '@/components/marketing/CookieBanner';
 import StickyMobileCTA from '@/components/marketing/StickyMobileCTA';
 import CommandPalette from '@/components/marketing/CommandPalette';
+import { CurrencyProvider } from '@/lib/currency';
 
 const BASE = 'https://clearcash.app';
 
@@ -47,7 +48,7 @@ export default function MarketingLayout({ children }) {
         <Script src="https://app.cal.com/embed/embed.js" strategy="lazyOnload" />
       )}
       <Navbar />
-      <main>{children}</main>
+      <main><CurrencyProvider>{children}</CurrencyProvider></main>
       <Footer />
       <CookieBanner />
       <StickyMobileCTA />

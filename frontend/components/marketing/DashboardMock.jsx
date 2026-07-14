@@ -2,17 +2,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ArrowUpRight, Sparkles, TrendingUp } from 'lucide-react';
+import { useCurrency, fmtCurrency } from '@/lib/currency';
 
+// Raw USD values — formatted at render time using the global currency
 const SCENARIOS = [
   {
-    label: 'Base',
-    color: '#2fb8a0',
-    fillId: 'tealFill',
-    delta: '+108.6%',
-    balance: '246,183',
-    runway: '21.4 mo',
-    burn: '$41,220',
-    takeaway: 'Runway extends by +2.3 months under P50 scenario. Two USD invoices totalling $48,200 land Nov 14.',
+    label: 'Base',   color: '#2fb8a0', fillId: 'tealFill',
+    delta: '+108.6%', balanceUSD: 246183, burnUSD: 41220, runway: '21.4 mo',
+    takeaway: 'Runway extends by +2.3 months under P50 scenario. Two cross-border invoices totalling $48,200 land Nov 14.',
     data: [
       { d: 'Jan', v: 118 }, { d: 'Feb', v: 132 }, { d: 'Mar', v: 126 },
       { d: 'Apr', v: 148 }, { d: 'May', v: 161 }, { d: 'Jun', v: 172 },
@@ -21,13 +18,8 @@ const SCENARIOS = [
     ],
   },
   {
-    label: 'Bull',
-    color: '#e0a34a',
-    fillId: 'amberFill',
-    delta: '+192.4%',
-    balance: '348,512',
-    runway: '28.6 mo',
-    burn: '$37,110',
+    label: 'Bull',   color: '#e0a34a', fillId: 'amberFill',
+    delta: '+192.4%', balanceUSD: 348512, burnUSD: 37110, runway: '28.6 mo',
     takeaway: 'Bull scenario: MRR growth +9%/mo sustains positive cash accretion through Dec. Runway risk: low.',
     data: [
       { d: 'Jan', v: 122 }, { d: 'Feb', v: 141 }, { d: 'Mar', v: 155 },
@@ -37,13 +29,8 @@ const SCENARIOS = [
     ],
   },
   {
-    label: 'Bear',
-    color: '#e0644f',
-    fillId: 'rustFill',
-    delta: '+28.1%',
-    balance: '152,214',
-    runway: '14.2 mo',
-    burn: '$46,800',
+    label: 'Bear',   color: '#e0644f', fillId: 'rustFill',
+    delta: '+28.1%',  balanceUSD: 152214, burnUSD: 46800, runway: '14.2 mo',
     takeaway: 'Bear scenario: MRR growth stalls at +1%/mo. Runway at risk Q3. Consider 10–15% cost action by May.',
     data: [
       { d: 'Jan', v: 116 }, { d: 'Feb', v: 121 }, { d: 'Mar', v: 115 },
@@ -57,6 +44,8 @@ const SCENARIOS = [
 export default function DashboardMock() {
   const [sceneIdx, setSceneIdx] = useState(0);
   const timerRef = useRef(null);
+  const { currency } = useCurrency();
+  const f = (usd) => fmtCurrency(usd, currency);
 
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -99,8 +88,8 @@ export default function DashboardMock() {
 
       {/* KPI strip */}
       <div className="grid grid-cols-3 hairline-b">
-        <Kpi label="Cash balance" value={`$${s.balance}`} delta={s.delta} positive={s.label !== 'Bear'} />
-        <Kpi label="Monthly burn" value={s.burn} delta={s.label === 'Bull' ? '−9.9%' : s.label === 'Bear' ? '+2.1%' : '−4.1%'} positive={s.label !== 'Bear'} divider />
+        <Kpi label="Cash balance" value={f(s.balanceUSD)} delta={s.delta} positive={s.label !== 'Bear'} />
+        <Kpi label="Monthly burn" value={f(s.burnUSD)} delta={s.label === 'Bull' ? '−9.9%' : s.label === 'Bear' ? '+2.1%' : '−4.1%'} positive={s.label !== 'Bear'} divider />
         <Kpi label="Runway" value={s.runway} delta={s.label === 'Bull' ? '+9.5 mo' : s.label === 'Bear' ? '−5.7 mo' : '+2.3 mo'} positive={s.label !== 'Bear'} divider />
       </div>
 
@@ -110,7 +99,7 @@ export default function DashboardMock() {
           <div>
             <p className="overline">Projected cash · next 12 months</p>
             <p className="num text-[15px] mt-1 text-white">
-              {s.balance} <span className="text-muted">USD</span>
+              {f(s.balanceUSD)} <span className="text-muted">{currency.code}</span>
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-1.5 text-[12px]" style={{ color: s.color }}>

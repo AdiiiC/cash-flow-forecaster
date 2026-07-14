@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import Logo from './Logo';
+import { CURRENCIES, useCurrency } from '@/lib/currency';
 
 const links = [
   { href: '/features', label: 'Features' },
@@ -15,7 +16,9 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [ccOpen, setCcOpen] = useState(false);
   const pathname = usePathname();
+  const { currency, setCurrency } = useCurrency();
 
   const linkCls = (href) =>
     `text-[13.5px] px-3 py-1.5 rounded-btn transition-colors ${
@@ -43,6 +46,37 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
+          {/* Currency picker */}
+          <div className="relative">
+            <button
+              onClick={() => setCcOpen((v) => !v)}
+              className="flex items-center gap-1 text-[12px] text-muted hover:text-white px-2.5 py-1.5 rounded-btn hairline bg-surface transition-colors num"
+              aria-label="Select currency"
+              data-testid="nav-currency-btn"
+            >
+              {currency.code}
+              <ChevronDown size={10} className={`transition-transform ${ccOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {ccOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 bg-elevated hairline rounded-card shadow-subtle py-1 z-50 min-w-[90px]"
+                data-testid="nav-currency-dropdown"
+              >
+                {CURRENCIES.map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => { setCurrency(c); setCcOpen(false); }}
+                    className={`w-full text-left px-4 py-2 text-[12.5px] num transition-colors ${
+                      c.code === currency.code ? 'text-white' : 'text-muted hover:text-white'
+                    }`}
+                    data-testid={`nav-currency-${c.code.toLowerCase()}`}
+                  >
+                    {c.symbol} {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <Link
             href="/dashboard"
             data-testid="nav-signin-btn"

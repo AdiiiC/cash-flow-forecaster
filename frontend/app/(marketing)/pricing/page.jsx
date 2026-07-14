@@ -4,6 +4,7 @@ import { Check, Minus, ArrowRight, X } from 'lucide-react';
 import Link from 'next/link';
 import { Reveal, Stagger, StaggerItem } from '@/components/marketing/Motion';
 import Button from '@/components/marketing/Button';
+import { useCurrency } from '@/lib/currency';
 
 const rawTiers = [
   {
@@ -79,11 +80,12 @@ function Cell({ v }) {
   return <span className="text-[13px] text-white num">{v}</span>;
 }
 
-function formatPrice(tier, annual) {
+function formatPrice(tier, annual, currency) {
   if (tier.price) return tier.price;
   if (tier.priceM === 0) return 'Free';
-  if (annual) return `$${(tier.priceA / 12).toFixed(0)}`;
-  return `$${tier.priceM}`;
+  const usd = annual ? tier.priceA / 12 : tier.priceM;
+  const converted = Math.round(usd * currency.rate);
+  return `${currency.symbol}${converted}`;
 }
 
 function formatPer(tier, annual) {
@@ -93,10 +95,20 @@ function formatPer(tier, annual) {
   return '/ month';
 }
 
+function formatSaving(tier, currency) {
+  if (!tier.priceM) return null;
+  const annualUSD = tier.priceA;
+  const monthlyTotalUSD = tier.priceM * 12;
+  const saved = Math.round((monthlyTotalUSD - annualUSD) * currency.rate);
+  const billed = Math.round(annualUSD * currency.rate);
+  return { billed: `${currency.symbol}${billed}`, saved: `${currency.symbol}${saved}` };
+}
+
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
   const [exitModal, setExitModal] = useState(false);
   const [exitShown, setExitShown] = useState(false);
+  const { currency } = useCurrency();
 
   useEffect(() => {
     const handler = (e) => {
@@ -201,8 +213,9 @@ export default function Pricing() {
       <section className="max-w-7xl mx-auto px-5 lg:px-8 pb-16">
         <Stagger className="grid md:grid-cols-3 gap-4">
           {rawTiers.map((t) => {
-            const price = formatPrice(t, annual);
+            const price = formatPrice(t, annual, currency);
             const per = formatPer(t, annual);
+            const saving = t.priceM > 0 && annual ? formatSaving(t, currency) : null;
             return (
               <StaggerItem key={t.key}>
                 <div
@@ -225,9 +238,9 @@ export default function Pricing() {
                     <span className="num text-[36px] text-white leading-none">{price}</span>
                     <span className="text-[13px] text-muted">{per}</span>
                   </div>
-                  {t.priceM > 0 && annual && (
+                  {t.priceM > 0 && annual && saving && (
                     <p className="mt-2 text-[11.5px] num text-muted">
-                      ${t.priceA} billed once · save ${t.priceM * 12 - t.priceA}
+                      {saving.billed} billed once · save {saving.saved}
                     </p>
                   )}
                   <ul className="mt-8 space-y-2.5 flex-1">
