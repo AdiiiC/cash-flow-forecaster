@@ -409,6 +409,7 @@ class RunSummary(BaseModel):
 class FxRates(BaseModel):
     base: str = "USD"
     rates: dict[str, float]  # code -> units of code per 1 base
+    changes: dict[str, float] = {}  # code -> 24h pct change (positive = code strengthened vs base)
     as_of: date
     fetched_at: datetime | None = None  # UTC timestamp of live fetch
 

@@ -36,46 +36,66 @@ _FALLBACK: dict[str, float] = {
     "CNY": 7.25,
 }
 
-# (_rates, fetched_at_monotonic, fetched_at_utc)
-_cache: tuple[dict[str, float], float, datetime] | None = None
+# (_rates, _changes, fetched_at_monotonic, fetched_at_utc)
+_cache: tuple[dict[str, float], dict[str, float], float, datetime] | None = None
 
 
-def _fetch_live() -> tuple[dict[str, float], datetime]:
-    """Fetch latest rates from frankfurter.app.  Returns (rates, fetched_at)."""
-    url = f"{_BASE_URL}/latest?base=USD&symbols={_SYMBOLS}"
-    resp = httpx.get(
-        url,
-        headers={"User-Agent": "CashFlowForecaster/1.0", "Accept": "application/json"},
-        timeout=8,
+def _fetch_live() -> tuple[dict[str, float], dict[str, float], datetime]:
+    """Fetch today's and yesterday's rates. Returns (today, changes_pct, fetched_at)."""
+    import httpx
+    headers = {"User-Agent": "CashFlowForecaster/1.0", "Accept": "application/json"}
+
+    # Today
+    resp_today = httpx.get(
+        f"{_BASE_URL}/latest?base=USD&symbols={_SYMBOLS}",
+        headers=headers, timeout=8,
     )
-    body: dict[str, Any] = resp.json()
-    raw: dict[str, float] = body.get("rates", {})
-    rates = {"USD": 1.0, **{k.upper(): float(v) for k, v in raw.items()}}
-    return rates, datetime.now(timezone.utc)
+    today_raw: dict[str, float] = resp_today.json().get("rates", {})
+    today = {"USD": 1.0, **{k.upper(): float(v) for k, v in today_raw.items()}}
+
+    # Yesterday (for 24h change)
+    from datetime import timedelta
+    yesterday = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+    try:
+        resp_yest = httpx.get(
+            f"{_BASE_URL}/{yesterday}?base=USD&symbols={_SYMBOLS}",
+            headers=headers, timeout=8,
+        )
+        yest_raw: dict[str, float] = resp_yest.json().get("rates", {})
+    except Exception:
+        yest_raw = {}
+
+    changes: dict[str, float] = {}
+    for code, rate in today.items():
+        prev = yest_raw.get(code) or yest_raw.get(code.lower())
+        if prev and prev != 0:
+            changes[code] = round((rate - float(prev)) / float(prev) * 100, 4)
+
+    return today, changes, datetime.now(timezone.utc)
 
 
 def get_rates() -> FxRates:
-    """Return live spot rates, refreshing from the upstream at most every 15 min."""
+    """Return live spot rates + 24h changes, refreshing every 15 min."""
     global _cache
     now = time.monotonic()
 
     if _cache is not None:
-        rates, cached_at, fetched_at = _cache
+        rates, changes, cached_at, fetched_at = _cache
         if now - cached_at < _CACHE_TTL:
-            return FxRates(base="USD", rates=rates,
+            return FxRates(base="USD", rates=rates, changes=changes,
                            as_of=fetched_at.date(), fetched_at=fetched_at)
 
     try:
-        rates, fetched_at = _fetch_live()
-        _cache = (rates, now, fetched_at)
-    except Exception:  # noqa: BLE001 — keep running on network failure
+        rates, changes, fetched_at = _fetch_live()
+        _cache = (rates, changes, now, fetched_at)
+    except Exception:  # noqa: BLE001
         if _cache is not None:
-            rates, _, fetched_at = _cache
+            rates, changes, _, fetched_at = _cache
         else:
-            rates = dict(_FALLBACK)
+            rates, changes = dict(_FALLBACK), {}
             fetched_at = datetime.now(timezone.utc)
 
-    return FxRates(base="USD", rates=rates,
+    return FxRates(base="USD", rates=rates, changes=changes,
                    as_of=fetched_at.date(), fetched_at=fetched_at)
 
 

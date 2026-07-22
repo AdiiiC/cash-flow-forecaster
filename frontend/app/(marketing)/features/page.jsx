@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BarChart3,
   Activity,
@@ -165,14 +165,66 @@ function Variance() {
 }
 
 // ---- Section 4: ExIm & Config ----
+const DISPLAY_PAIRS = [
+  { base: 'USD', quote: 'INR' },
+  { base: 'EUR', quote: 'USD' },
+  { base: 'GBP', quote: 'USD' },
+  { base: 'SGD', quote: 'USD' },
+  { base: 'JPY', quote: 'USD' },
+];
+
 function ExImConfig() {
-  const fx = [
-    { p: 'USD', t: 'INR', r: '83.42', d: '+0.14%' },
-    { p: 'EUR', t: 'USD', r: '1.087', d: '−0.08%' },
-    { p: 'GBP', t: 'EUR', r: '1.163', d: '+0.21%' },
-    { p: 'SGD', t: 'USD', r: '0.744', d: '+0.05%' },
-    { p: 'JPY', t: 'USD', r: '0.0067', d: '−0.11%' },
-  ];
+  const [fxData, setFxData] = useState(null);   // { rates, changes, fetched_at }
+  const [age, setAge]       = useState(null);   // "X min ago"
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000';
+        const res  = await fetch(`${base}/api/fx/live`);
+        if (res.ok) setFxData(await res.json());
+      } catch { /* silently fall back to static display */ }
+    };
+    load();
+    const id = setInterval(load, 15 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Update "X min ago" label every minute
+  useEffect(() => {
+    if (!fxData?.fetched_at) return;
+    const tick = () => {
+      const diff = Math.floor((Date.now() - new Date(fxData.fetched_at).getTime()) / 60000);
+      setAge(diff < 1 ? 'just now' : `${diff} min ago`);
+    };
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [fxData?.fetched_at]);
+
+  // Build display rows from live data or fall back to static
+  const fx = DISPLAY_PAIRS.map(({ base, quote }) => {
+    const rateRaw = fxData?.rates
+      ? (() => {
+          // rates are all vs USD base; cross-rate = quote_per_usd / base_per_usd
+          const rUSD = fxData.rates['USD'] ?? 1;
+          const rBase  = base  === 'USD' ? rUSD  : (fxData.rates[base]  ?? null);
+          const rQuote = quote === 'USD' ? rUSD  : (fxData.rates[quote] ?? null);
+          return rBase && rQuote ? rQuote / rBase : null;
+        })()
+      : null;
+
+    const chgBase  = fxData?.changes?.[base]  ?? 0;
+    const chgQuote = fxData?.changes?.[quote] ?? 0;
+    const chg = chgQuote - chgBase;
+
+    return {
+      p: base, t: quote,
+      r: rateRaw !== null ? rateRaw.toFixed(rateRaw < 0.01 ? 4 : rateRaw < 10 ? 3 : 2) : '…',
+      d: rateRaw !== null ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%` : '…',
+      pos: chg >= 0,
+    };
+  });
   const invoices = [
     { id: 'INV-2841', c: 'Acme Berlin', amt: '€24,500', due: 'Nov 14', fx: '1.087 → 1.093' },
     { id: 'INV-2853', c: 'Nimbus SG', amt: 'S$18,200', due: 'Nov 22', fx: '0.744 → 0.749' },
@@ -184,6 +236,12 @@ function ExImConfig() {
         <div className="flex items-center gap-2">
           <Globe2 size={14} className="text-accent" />
           <p className="overline">Live FX · 12 currencies</p>
+          {age && (
+            <span className="ml-auto flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-positive" />
+              <span className="text-[10px] text-muted">{age}</span>
+            </span>
+          )}
         </div>
         <table className="w-full mt-5 text-[13px]">
           <thead>
@@ -198,7 +256,7 @@ function ExImConfig() {
               <tr key={f.p + f.t} className="hairline-b last:border-0">
                 <td className="py-2.5 num text-white">{f.p} / {f.t}</td>
                 <td className="py-2.5 num text-white text-right">{f.r}</td>
-                <td className={`py-2.5 num text-right ${f.d.startsWith('+') ? 'text-positive' : 'text-negative'}`}>{f.d}</td>
+                <td className={`py-2.5 num text-right ${f.pos ? 'text-positive' : 'text-negative'}`}>{f.d}</td>
               </tr>
             ))}
           </tbody>
