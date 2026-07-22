@@ -24,7 +24,7 @@ _SYMBOLS = "INR,EUR,GBP,AED,SGD,JPY,AUD,CAD,CHF,CNY"
 # Fallback rates (indicative mid-market) used if the live fetch fails
 _FALLBACK: dict[str, float] = {
     "USD": 1.0,
-    "INR": 83.5,
+    "INR": 96.5,
     "EUR": 0.92,
     "GBP": 0.79,
     "AED": 3.67,
@@ -48,7 +48,7 @@ def _fetch_live() -> tuple[dict[str, float], dict[str, float], datetime]:
     # Today
     resp_today = httpx.get(
         f"{_BASE_URL}/latest?base=USD&symbols={_SYMBOLS}",
-        headers=headers, timeout=8,
+        headers=headers, timeout=8, follow_redirects=True,
     )
     today_raw: dict[str, float] = resp_today.json().get("rates", {})
     today = {"USD": 1.0, **{k.upper(): float(v) for k, v in today_raw.items()}}
@@ -59,7 +59,7 @@ def _fetch_live() -> tuple[dict[str, float], dict[str, float], datetime]:
     try:
         resp_yest = httpx.get(
             f"{_BASE_URL}/{yesterday}?base=USD&symbols={_SYMBOLS}",
-            headers=headers, timeout=8,
+            headers=headers, timeout=8, follow_redirects=True,
         )
         yest_raw: dict[str, float] = resp_yest.json().get("rates", {})
     except Exception:
