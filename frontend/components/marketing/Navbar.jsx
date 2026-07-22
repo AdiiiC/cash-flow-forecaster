@@ -18,7 +18,15 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [ccOpen, setCcOpen] = useState(false);
   const pathname = usePathname();
-  const { currency, setCurrency } = useCurrency();
+  const { currency, setCurrency, fetchedAt } = useCurrency();
+
+  // "3 min ago" label for the live-rate badge
+  const rateAge = (() => {
+    if (!fetchedAt) return null;
+    const diff = Math.floor((Date.now() - new Date(fetchedAt).getTime()) / 60000);
+    if (diff < 1) return 'just now';
+    return `${diff} min ago`;
+  })();
 
   const linkCls = (href) =>
     `text-[13.5px] px-3 py-1.5 rounded-btn transition-colors ${
@@ -59,7 +67,7 @@ export default function Navbar() {
             </button>
             {ccOpen && (
               <div
-                className="absolute right-0 top-full mt-1.5 bg-elevated hairline rounded-card shadow-subtle py-1 z-50 min-w-[90px]"
+                className="absolute right-0 top-full mt-1.5 bg-elevated hairline rounded-card shadow-subtle py-1 z-50 min-w-[110px]"
                 data-testid="nav-currency-dropdown"
               >
                 {CURRENCIES.map((c) => (
@@ -74,6 +82,12 @@ export default function Navbar() {
                     {c.symbol} {c.name}
                   </button>
                 ))}
+                {rateAge && (
+                  <div className="px-4 py-2 hairline-t flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-positive shrink-0" />
+                    <span className="text-[10px] text-muted">Live · {rateAge}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

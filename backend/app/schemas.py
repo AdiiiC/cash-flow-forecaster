@@ -410,6 +410,7 @@ class FxRates(BaseModel):
     base: str = "USD"
     rates: dict[str, float]  # code -> units of code per 1 base
     as_of: date
+    fetched_at: datetime | None = None  # UTC timestamp of live fetch
 
 
 class UserCreate(BaseModel):

@@ -222,9 +222,16 @@ def _forecast_to_csv(run: ForecastResponse) -> str:
     return "\n".join(lines) + "\n"
 
 
-# ---- FX ------------------------------------------------------------------------
+# ---- FX -----------------------------------------------------------------------
 
 
 @router.get("/fx", response_model=FxRates)
 def fx_rates() -> FxRates:
+    """Live spot rates (cached 15 min). Includes fetched_at UTC timestamp."""
+    return fx_mod.get_rates()
+
+
+@router.get("/fx/live", response_model=FxRates)
+def fx_rates_live() -> FxRates:
+    """Alias for /fx — explicitly signals live-rate intent to callers."""
     return fx_mod.get_rates()
