@@ -204,7 +204,7 @@ function ExImConfig() {
           </tbody>
         </table>
         <p className="mt-5 text-[12px] text-muted leading-relaxed">
-          Cross-border invoices are priced at <span className="text-white">predicted FX on payment date</span> — not spot — using a rolling 90-day volatility model.
+          Outstanding cross-border invoices are converted at the <span className="text-white">live spot rate</span> — refreshed every 15 minutes from ECB data — so your pending AP/AR always reflects today&apos;s actual exposure.
         </p>
       </div>
       <div className="bg-surface hairline rounded-card overflow-hidden">
@@ -302,7 +302,7 @@ const capabilities = [
   { key: 'exec', icon: BarChart3, title: 'Executive Dashboard', tag: '01 · Overview', body: 'One glance. Cash balance, burn, runway, MRR — all with confidence bands and AI takeaways written like a good CFO would.' },
   { key: 'bi', icon: Activity, title: 'Business Intelligence', tag: '02 · Depth', body: 'Burn rate, working capital, current & quick ratios, gross margin, ARR waterfall. Every metric is exportable.' },
   { key: 'act', icon: FileSpreadsheet, title: 'Actuals & Variance', tag: '03 · Truth', body: 'Upload CSV or XLSX. We auto-map columns, compare against plan, and colour variance line by line.' },
-  { key: 'ex', icon: Globe2, title: 'ExIm & Config', tag: '04 · Global', body: 'Cross-border invoices priced at predicted FX on payment date. 12 currencies, one clean view.' },
+  { key: 'ex', icon: Globe2, title: 'ExIm & Config', tag: '04 · Global', body: 'Outstanding cross-border invoices converted at live spot rates, refreshed every 15 min. 12 currencies, one clean view.' },
   { key: 'sec', icon: Shield, title: 'Security', tag: '05 · Trust', body: 'MFA (TOTP + email OTP), JWT, bcrypt, SOC 2 Type II, ISO 27001, GDPR. Read-only OAuth to your books.' },
 ];
 

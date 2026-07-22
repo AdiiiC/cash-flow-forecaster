@@ -36,7 +36,7 @@ const features = [
   {
     icon: Globe2,
     title: 'Multi-currency ExIm',
-    body: 'Track cross-border invoices with predicted FX at payment date — not spot. Built for founders who bill in three currencies.',
+    body: 'Track cross-border invoices with live spot FX rates, refreshed every 15 min. Outstanding AP/AR always shows your real exposure — not a forecast.',
     tag: '12 currencies',
   },
 ];
@@ -59,7 +59,7 @@ const steps = [
     icon: LineChart,
     n: '02',
     title: 'Forecast',
-    body: 'Probabilistic model rebuilds every hour. FX priced at payment date.',
+    body: 'Probabilistic model rebuilds every hour. Outstanding AP/AR converted at live spot FX rates.',
   },
   {
     icon: Zap,
@@ -139,7 +139,7 @@ const tiers = [
 const faqs = [
   {
     q: 'How is ClearCash different from a spreadsheet forecast?',
-    a: 'Spreadsheets give you a single line. ClearCash gives you a distribution — P10 / P50 / P90 — driven by your real transaction history, updated hourly, with FX modelled at payment date rather than spot.',
+    a: 'Spreadsheets give you a single line. ClearCash gives you a distribution — P10 / P50 / P90 — driven by your real transaction history, updated hourly. Outstanding cross-border invoices are converted at live spot rates, refreshed every 15 minutes.',
   },
   {
     q: 'Which accounting and banking integrations do you support?',

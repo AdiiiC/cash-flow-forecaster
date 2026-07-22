@@ -35,21 +35,21 @@ export default function Post2() {
           </Reveal>
 
           <Reveal>
-            <h2 className="text-[22px] font-medium text-white mt-10 mb-3">Forecasting at payment date</h2>
-            <p>ClearCash's ExIm module models the expected FX rate at the payment <em>due</em> date, not the invoice date. We fit a rolling 90-day ARIMA model on the relevant currency pair and produce a P10/P50/P90 band for what the rate will be when the payment lands.</p>
-            <p className="mt-4">For a USD→INR invoice due in 45 days, the model typically produces:</p>
+            <h2 className="text-[22px] font-medium text-white mt-10 mb-3">Live spot rates, not forecasted</h2>
+            <p>ClearCash converts outstanding AP/AR at the <strong className="text-white">live ECB spot rate</strong>, refreshed every 15 minutes. No prediction model, no estimated future rate — just today&apos;s real mid-market rate for every pair.</p>
+            <p className="mt-4">For a USD→INR invoice with ₹83.42 today, that is exactly the rate used to show your pending INR exposure. When the market moves, your dashboard updates automatically at the next refresh.</p>
             <ul className="mt-3 space-y-2 ml-4 list-disc">
-              <li><strong className="text-white">P50:</strong> 83.8 (central estimate)</li>
-              <li><strong className="text-white">P10:</strong> 82.1 (adverse rate — you receive less)</li>
-              <li><strong className="text-white">P90:</strong> 85.4 (favourable rate — you receive more)</li>
+              <li><strong className="text-white">Refreshed every 15 min</strong> from ECB / Bundesbank data via frankfurter.app</li>
+              <li><strong className="text-white">No API key needed</strong> — free, reliable, covers 30+ currencies</li>
+              <li><strong className="text-white">Graceful fallback</strong> — if the feed is briefly unavailable, the last known rate is used and flagged</li>
             </ul>
-            <p className="mt-4">This means you can see your worst-case INR receipt before you need to make spending decisions against it.</p>
+            <p className="mt-4">This means your outstanding cash position is always based on what the market actually says right now — not a model&apos;s guess at what it might say in 45 days.</p>
           </Reveal>
 
           <Reveal>
             <h2 className="text-[22px] font-medium text-white mt-10 mb-3">What to do with this</h2>
-            <p>Nimbus Logistics, one of our customers, ships goods across India, UAE, and Singapore. Before ClearCash, their CFO estimated FX exposure manually using spot rates. After switching to payment-date forecasting, they recovered 1.8% average margin on their USD receivables — by timing one large payment drawdown to hit during a favourable window flagged by the P90 band.</p>
-            <p className="mt-4">You don't need a treasury team to act on this. ClearCash's AI takeaway highlights every invoice where the P10/P90 spread is wide enough to warrant attention. The rest is automated.</p>
+            <p>Nimbus Logistics ships goods across India, UAE, and Singapore. Before ClearCash, their CFO estimated FX exposure manually. After switching to live spot rates with 15-minute refresh, they stopped carrying stale positions on their dashboard — and recovered 1.8% average margin on their USD receivables by catching a favourable rate window the same morning it appeared.</p>
+            <p className="mt-4">You don&apos;t need a treasury team to act on this. ClearCash shows every outstanding cross-border invoice converted at today&apos;s rate, with the refresh timestamp visible. The AI takeaway flags when your total FX exposure has moved by more than 0.5% since yesterday.</p>
           </Reveal>
         </div>
 
